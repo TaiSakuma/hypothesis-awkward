@@ -7,8 +7,18 @@ authors = [
     { name = "Tai Sakuma", email = "tai.sakuma@gmail.com" }
 ]
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "awkward>=2.8.9",
+    "hypothesis>=6.142.1",
+]
 
 [build-system]
 requires = ["uv_build>=0.9.3,<0.10.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.18.2",
+    "pytest>=8.4.2",
+    "ruff>=0.14.1",
+]
