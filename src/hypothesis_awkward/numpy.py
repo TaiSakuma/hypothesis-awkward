@@ -35,7 +35,9 @@ SUPPORTED_DTYPE_NAMES = _supported_dtype_names()
 
 # NumPy dtypes supported by Awkward Array
 # (dtype('bool'), dtype('int8'), dtype('float16'), dtype('datetime64[ns]'), ...)
-SUPPORTED_DTYPES = tuple(primitive_to_dtype(name) for name in SUPPORTED_DTYPE_NAMES)
+SUPPORTED_DTYPES = tuple[np.dtype, ...](
+    primitive_to_dtype(name) for name in SUPPORTED_DTYPE_NAMES
+)
 
 
 def supported_dtype_names() -> st.SearchStrategy[str]:
