@@ -24,6 +24,7 @@ def test_items_from_dtype(data: st.DataObject) -> None:
             # datetime64 requires the unit.
             unit, _ = np.datetime_data(dtype)
             n = dtype.type(item, unit)
+            assert not isinstance(item, int)
         else:
             n = dtype.type(item)
         return n.item()
