@@ -29,6 +29,7 @@ def test_supported_dtypes(dtype: np.dtype) -> None:
 class NumpyDtypesKwargs(TypedDict, total=False):
     '''Options for `numpy_dtypes()` strategy.'''
 
+    dtype: np.dtype | st.SearchStrategy[np.dtype] | None
     allow_array: bool
 
 
@@ -36,6 +37,15 @@ class NumpyDtypesKwargs(TypedDict, total=False):
 def numpy_dtypes_kwargs(draw: st.DrawFn) -> NumpyDtypesKwargs:
     '''Strategy for options to `numpy_dtypes()` strategy.'''
     kwargs = NumpyDtypesKwargs()
+
+    if draw(st.booleans()):
+        kwargs['dtype'] = draw(
+            st.one_of(
+                st.none(),
+                st.just(supported_dtypes()),
+                supported_dtypes(),
+            )
+        )
 
     if draw(st.booleans()):
         kwargs['allow_array'] = draw(st.booleans())
@@ -49,15 +59,35 @@ def test_numpy_dtypes(data: st.DataObject) -> None:
     kwargs = data.draw(numpy_dtypes_kwargs(), label='kwargs')
 
     # Call the test subject
-    dtype = data.draw(numpy_dtypes(**kwargs), label='dtype')
+    result = data.draw(numpy_dtypes(**kwargs), label='dtype')
 
     # Assert the options were effective
+    dtype = kwargs.get('dtype', None)
     allow_array = kwargs.get('allow_array', True)
+
+    def _dtype_kinds(d: np.dtype) -> set[str]:
+        if d.names is None:  # simple dtype
+            kind = d.kind
+            if kind == 'V' and d.subdtype is not None:
+                kind = d.subdtype[0].kind
+            return {kind}
+        else:  # structured dtype
+            kinds = set()
+            for name in d.names:
+                f = d.fields
+                assert f is not None
+                kinds.update(_dtype_kinds(f[name][0]))
+            return kinds
+
+    if dtype is not None and not isinstance(dtype, st.SearchStrategy):
+        kinds = _dtype_kinds(result)
+        assert len(kinds) == 1
+        assert dtype.kind in kinds
     if not allow_array:
-        assert dtype.names is None
+        assert result.names is None  # not structured
 
     # Assert an Awkward Array can be created.
-    ak.from_numpy(np.array([], dtype=dtype))
+    ak.from_numpy(np.array([], dtype=result))
 
 
 class NumpyArraysKwargs(TypedDict, total=False):
@@ -81,7 +111,8 @@ def numpy_arrays_kwargs(draw: st.DrawFn) -> NumpyArraysKwargs:
     return kwargs
 
 
-@settings(max_examples=200)
+# @pytest.mark.skip
+# @settings(max_examples=2000)
 @given(data=st.data())
 def test_numpy_arrays(data: st.DataObject) -> None:
     # Draw options
@@ -99,8 +130,18 @@ def test_numpy_arrays(data: st.DataObject) -> None:
 
     def _has_nan(n: np.ndarray) -> bool:
         if _is_structured(n):
-            n = structured_to_unstructured(n)
-        return bool(np.any(np.isnan(n)))
+            try:
+                n = structured_to_unstructured(n)
+            except (TypeError, OverflowError, np.exceptions.DTypePromotionError):
+                # Recursively check each field
+                return any(_has_nan(n[field]) for field in n.dtype.names)
+        kind = n.dtype.kind
+        if kind in {'f', 'c'}:
+            return bool(np.any(np.isnan(n)))
+        elif kind in {'m', 'M'}:
+            return bool(np.any(np.isnat(n)))
+        else:
+            return False
 
     structured = _is_structured(n)
     has_nan = _has_nan(n)
@@ -182,6 +223,7 @@ def from_numpy_kwargs(draw: st.DrawFn) -> FromNumpyKwargs:
     return kwargs
 
 
+# @settings(max_examples=2000)
 @given(data=st.data())
 def test_from_numpy(data: st.DataObject) -> None:
     # Draw options
@@ -202,8 +244,25 @@ def test_from_numpy(data: st.DataObject) -> None:
         assert isinstance(layout, ak.contents.RecordArray)  # structured array
         return True
 
-    def _has_nan(a: ak.Array) -> bool:
-        return bool(np.any(np.isnan(ak.flatten(a, axis=None))))
+    def _has_nan(
+        a: ak.Array | ak.contents.RecordArray | ak.contents.NumpyArray,
+    ) -> bool:
+        match a:
+            case ak.Array():
+                return _has_nan(a.layout)
+            case ak.contents.RecordArray():
+                return any(_has_nan(a[field]) for field in a.fields)
+            case ak.contents.NumpyArray():
+                arr = a.data
+                kind = arr.dtype.kind
+                if kind in {'f', 'c'}:
+                    return bool(np.any(np.isnan(arr)))
+                elif kind in {'m', 'M'}:
+                    return bool(np.any(np.isnat(arr)))
+                else:
+                    return False
+            case _:
+                raise TypeError(f'Unexpected type: {type(a)}')
 
     structured = _is_structured(a)
     has_nan = _has_nan(a)

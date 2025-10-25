@@ -62,7 +62,10 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
     return st.sampled_from(SUPPORTED_DTYPES)
 
 
-def numpy_dtypes(allow_array: bool = True) -> st.SearchStrategy[np.dtype]:
+def numpy_dtypes(
+    dtype: np.dtype | st.SearchStrategy[np.dtype] | None = None,
+    allow_array: bool = True,
+) -> st.SearchStrategy[np.dtype]:
     '''Strategy for dtypes (simple or array) supported by Awkward Array.
 
     Examples of simple dtypes are dtype('int32'), dtype('float64')
@@ -72,6 +75,9 @@ def numpy_dtypes(allow_array: bool = True) -> st.SearchStrategy[np.dtype]:
 
     Parameters
     ----------
+    dtype
+        A simple dtype or a strategy for simple dtypes for determining the type of
+        array elements. If `None`, any supported simple dtype is used.
     allow_array
         Generate only simple dtypes if `False`, else array dtypes as well.
 
@@ -80,11 +86,13 @@ def numpy_dtypes(allow_array: bool = True) -> st.SearchStrategy[np.dtype]:
     >>> numpy_dtypes().example()
     dtype(...)
     '''
+    if dtype is None:
+        dtype = supported_dtypes()
+    if not isinstance(dtype, st.SearchStrategy):
+        dtype = st.just(dtype)
     if not allow_array:
-        return supported_dtypes()
-    # `nested_dtypes` generates both simple and array dtypes.
-    # `max_leaves` is set to `1` as `ak.from_numpy()` doesn't support otherwise.
-    return st_np.nested_dtypes(subtype_strategy=supported_dtypes(), max_leaves=1)
+        return dtype
+    return st_np.array_dtypes(subtype_strategy=dtype, allow_subarrays=True)
 
 
 def numpy_arrays(
