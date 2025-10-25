@@ -1,3 +1,5 @@
+from typing import TypedDict
+
 import numpy as np
 import pytest
 from hypothesis import given, note, settings
@@ -24,28 +26,74 @@ def test_supported_dtypes(dtype: np.dtype) -> None:
     ak.from_numpy(np.array([], dtype=dtype))
 
 
+class NumpyDtypesKwargs(TypedDict, total=False):
+    '''Options for `numpy_dtypes()` strategy.'''
+
+    allow_array: bool
+
+
+@st.composite
+def numpy_dtypes_kwargs(draw: st.DrawFn) -> NumpyDtypesKwargs:
+    '''Strategy for options to `numpy_dtypes()` strategy.'''
+    kwargs = NumpyDtypesKwargs()
+
+    if draw(st.booleans()):
+        kwargs['allow_array'] = draw(st.booleans())
+
+    return kwargs
+
+
 @given(data=st.data())
 def test_numpy_dtypes(data: st.DataObject) -> None:
-    array = data.draw(st.booleans(), label='array')
-    dtype = data.draw(numpy_dtypes(allow_array=array), label='dtype')
-    if not array:
+    # Draw options
+    kwargs = data.draw(numpy_dtypes_kwargs(), label='kwargs')
+
+    # Call the test subject
+    dtype = data.draw(numpy_dtypes(**kwargs), label='dtype')
+
+    # Assert the options were effective
+    allow_array = kwargs.get('allow_array', True)
+    if not allow_array:
         assert dtype.names is None
+
+    # Assert an Awkward Array can be created.
     ak.from_numpy(np.array([], dtype=dtype))
+
+
+class NumpyArraysKwargs(TypedDict, total=False):
+    '''Options for `numpy_arrays()` strategy.'''
+
+    allow_structured: bool
+    allow_nan: bool
+
+
+@st.composite
+def numpy_arrays_kwargs(draw: st.DrawFn) -> NumpyArraysKwargs:
+    '''Strategy for options to `numpy_arrays()` strategy.'''
+    kwargs = NumpyArraysKwargs()
+
+    if draw(st.booleans()):
+        kwargs['allow_structured'] = draw(st.booleans())
+
+    if draw(st.booleans()):
+        kwargs['allow_nan'] = draw(st.booleans())
+
+    return kwargs
 
 
 @settings(max_examples=200)
 @given(data=st.data())
 def test_numpy_arrays(data: st.DataObject) -> None:
     # Draw options
-    allow_structured = data.draw(st.booleans(), label='structured')
-    allow_nan = data.draw(st.booleans(), label='allow_nan')
+    kwargs = data.draw(numpy_arrays_kwargs(), label='kwargs')
 
     # Call the test subject
-    n = data.draw(
-        numpy_arrays(allow_structured=allow_structured, allow_nan=allow_nan), label='n'
-    )
+    n = data.draw(numpy_arrays(**kwargs), label='n')
 
     # Assert the options were effective
+    allow_structured = kwargs.get('allow_structured', True)
+    allow_nan = kwargs.get('allow_nan', False)
+
     def _is_structured(n: np.ndarray) -> bool:
         return n.dtype.names is not None
 
@@ -113,19 +161,40 @@ def test_numpy_arrays(data: st.DataObject) -> None:
             a.to_numpy()
 
 
+class FromNumpyKwargs(TypedDict, total=False):
+    '''Options for `from_numpy()` strategy.'''
+
+    allow_structured: bool
+    allow_nan: bool
+
+
+@st.composite
+def from_numpy_kwargs(draw: st.DrawFn) -> FromNumpyKwargs:
+    '''Strategy for options to `from_numpy()` strategy.'''
+    kwargs = FromNumpyKwargs()
+
+    if draw(st.booleans()):
+        kwargs['allow_structured'] = draw(st.booleans())
+
+    if draw(st.booleans()):
+        kwargs['allow_nan'] = draw(st.booleans())
+
+    return kwargs
+
+
 @given(data=st.data())
 def test_from_numpy(data: st.DataObject) -> None:
     # Draw options
-    allow_structured = data.draw(st.booleans(), label='structured')
-    allow_nan = data.draw(st.booleans(), label='allow_nan')
+    kwargs = data.draw(from_numpy_kwargs(), label='kwargs')
 
     # Call the test subject
-    a = data.draw(
-        from_numpy(allow_structured=allow_structured, allow_nan=allow_nan), label='a'
-    )
+    a = data.draw(from_numpy(**kwargs), label='a')
     assert isinstance(a, ak.Array)
 
     # Assert the options were effective
+    allow_structured = kwargs.get('allow_structured', True)
+    allow_nan = kwargs.get('allow_nan', False)
+
     def _is_structured(a: ak.Array) -> bool:
         layout = a.layout
         if isinstance(layout, ak.contents.NumpyArray):  # simple array
