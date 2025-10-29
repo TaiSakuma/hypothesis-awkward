@@ -6,18 +6,13 @@ from hypothesis import given, note
 from hypothesis import strategies as st
 
 import awkward as ak
-from hypothesis_awkward.builtins_ import (
-    builtin_safe_dtypes,
-    from_list,
-    items_from_dtype,
-    lists,
-)
+import hypothesis_awkward.strategies as st_ak
 
 
 @given(data=st.data())
 def test_items_from_dtype(data: st.DataObject) -> None:
-    dtype = data.draw(builtin_safe_dtypes(), label='dtype')
-    item = data.draw(items_from_dtype(dtype), label='item')
+    dtype = data.draw(st_ak.builtin_safe_dtypes(), label='dtype')
+    item = data.draw(st_ak.items_from_dtype(dtype), label='item')
 
     def _to_dtype_to_item(dtype: np.dtype, item: Any) -> Any:
         if dtype.kind == 'M':  # datetime64
@@ -47,8 +42,8 @@ def lists_kwargs(draw: st.DrawFn) -> ListsKwargs:
         kwargs['dtype'] = draw(
             st.one_of(
                 st.none(),
-                st.just(builtin_safe_dtypes()),
-                builtin_safe_dtypes(),
+                st.just(st_ak.builtin_safe_dtypes()),
+                st_ak.builtin_safe_dtypes(),
             )
         )
 
@@ -70,7 +65,7 @@ def test_lists(data: st.DataObject) -> None:
     kwargs = data.draw(lists_kwargs(), label='kwargs')
 
     # Call the test subject
-    l = data.draw(lists(**kwargs), label='l')
+    l = data.draw(st_ak.lists(**kwargs), label='l')
 
     # Assert the options were effective
     dtype = kwargs.get('dtype', None)
@@ -139,5 +134,5 @@ def test_from_list(data: st.DataObject) -> None:
     kwargs = data.draw(lists_kwargs(), label='kwargs')
 
     # Call the test subject
-    a = data.draw(from_list(**kwargs), label='a')
+    a = data.draw(st_ak.from_list(**kwargs), label='a')
     assert isinstance(a, ak.Array)

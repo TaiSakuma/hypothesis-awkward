@@ -6,21 +6,15 @@ from hypothesis import given, note, settings
 from hypothesis import strategies as st
 
 import awkward as ak
-from hypothesis_awkward.numpy import (
-    from_numpy,
-    numpy_arrays,
-    numpy_dtypes,
-    supported_dtype_names,
-    supported_dtypes,
-)
+import hypothesis_awkward.strategies as st_ak
 
 
-@given(name=supported_dtype_names())
+@given(name=st_ak.supported_dtype_names())
 def test_supported_dtype_names(name: str) -> None:
     ak.from_numpy(np.array([], dtype=name))
 
 
-@given(dtype=supported_dtypes())
+@given(dtype=st_ak.supported_dtypes())
 def test_supported_dtypes(dtype: np.dtype) -> None:
     ak.from_numpy(np.array([], dtype=dtype))
 
@@ -41,8 +35,8 @@ def numpy_dtypes_kwargs(draw: st.DrawFn) -> NumpyDtypesKwargs:
         kwargs['dtype'] = draw(
             st.one_of(
                 st.none(),
-                st.just(supported_dtypes()),
-                supported_dtypes(),
+                st.just(st_ak.supported_dtypes()),
+                st_ak.supported_dtypes(),
             )
         )
 
@@ -74,7 +68,7 @@ def test_numpy_dtypes(data: st.DataObject) -> None:
     kwargs = data.draw(numpy_dtypes_kwargs(), label='kwargs')
 
     # Call the test subject
-    result = data.draw(numpy_dtypes(**kwargs), label='dtype')
+    result = data.draw(st_ak.numpy_dtypes(**kwargs), label='dtype')
 
     # Assert the options were effective
     dtype = kwargs.get('dtype', None)
@@ -108,8 +102,8 @@ def numpy_arrays_kwargs(draw: st.DrawFn) -> NumpyArraysKwargs:
         kwargs['dtype'] = draw(
             st.one_of(
                 st.none(),
-                st.just(supported_dtypes()),
-                supported_dtypes(),
+                st.just(st_ak.supported_dtypes()),
+                st_ak.supported_dtypes(),
             )
         )
 
@@ -129,7 +123,7 @@ def test_numpy_arrays(data: st.DataObject) -> None:
     kwargs = data.draw(numpy_arrays_kwargs(), label='kwargs')
 
     # Call the test subject
-    n = data.draw(numpy_arrays(**kwargs), label='n')
+    n = data.draw(st_ak.numpy_arrays(**kwargs), label='n')
 
     # Assert the options were effective
     dtype = kwargs.get('dtype', None)
@@ -229,8 +223,8 @@ def from_numpy_kwargs(draw: st.DrawFn) -> FromNumpyKwargs:
         kwargs['dtype'] = draw(
             st.one_of(
                 st.none(),
-                st.just(supported_dtypes()),
-                supported_dtypes(),
+                st.just(st_ak.supported_dtypes()),
+                st_ak.supported_dtypes(),
             )
         )
 
@@ -250,7 +244,7 @@ def test_from_numpy(data: st.DataObject) -> None:
     kwargs = data.draw(from_numpy_kwargs(), label='kwargs')
 
     # Call the test subject
-    a = data.draw(from_numpy(**kwargs), label='a')
+    a = data.draw(st_ak.from_numpy(**kwargs), label='a')
     assert isinstance(a, ak.Array)
 
     # Assert the options were effective

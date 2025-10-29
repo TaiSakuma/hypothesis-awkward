@@ -1,6 +1,5 @@
 __all__ = [
-    'builtins_',
-    'numpy',
+    'strategies',
 ]
 
-from . import builtins_, numpy
+from . import strategies
