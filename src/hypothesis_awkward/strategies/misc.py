@@ -13,17 +13,17 @@ class StMinMaxValuesFactory(Protocol[T]):  # pragma: no cover
     ) -> st.SearchStrategy[T]: ...
 
 
-def st_none_or(st_: st.SearchStrategy[T]) -> st.SearchStrategy[Optional[T]]:
+def none_or(st_: st.SearchStrategy[T]) -> st.SearchStrategy[Optional[T]]:
     '''A strategy for `None` or values from another strategy.
 
-    >>> v = st_none_or(st.integers()).example()
+    >>> v = none_or(st.integers()).example()
     >>> v is None or isinstance(v, int)
     True
     '''
     return st.one_of(st.none(), st_)
 
 
-def st_ranges(
+def ranges(
     st_: StMinMaxValuesFactory[T] = st.integers,  # type: ignore
     /,
     *,
@@ -48,7 +48,7 @@ def st_ranges(
 
     If `allow_equal` is `False`, `start` and `end` cannot be equal, i.e., `start < end`.
 
-    >>> start, end = st_ranges(
+    >>> start, end = ranges(
     ...     st.integers,
     ...     min_start=0,
     ...     max_end=10,
@@ -70,12 +70,12 @@ def st_ranges(
 
     '''
 
-    def st_start() -> st.SearchStrategy[Optional[T]]:
+    def starts() -> st.SearchStrategy[Optional[T]]:
         _max_start = safe_min((max_start, max_end))
         _st = st_(min_value=min_start, max_value=_max_start)
-        return st_none_or(_st) if allow_start_none else _st
+        return none_or(_st) if allow_start_none else _st
 
-    def st_end(start: T | None) -> st.SearchStrategy[Optional[T]]:
+    def ends(start: T | None) -> st.SearchStrategy[Optional[T]]:
         _min_end = safe_max((min_start, start, min_end))
         if min_end is not None and max_end is not None:
             assert min_end <= max_end  # type: ignore
@@ -84,8 +84,8 @@ def st_ranges(
         _st = st_(min_value=_min_end, max_value=max_end)
         if start is not None and not allow_equal:
             _st = _st.filter(lambda x: x > start)  # type: ignore
-        return st_none_or(_st) if allow_end_none else _st
+        return none_or(_st) if allow_end_none else _st
 
-    return st_start().flatmap(
-        lambda start: st.tuples(st.just(start), st_end(start=start))
+    return starts().flatmap(
+        lambda start: st.tuples(st.just(start), ends(start=start))
     )

@@ -4,8 +4,8 @@ __all__ = [
     'items_from_dtype',
     'lists',
     'StMinMaxValuesFactory',
-    'st_none_or',
-    'st_ranges',
+    'none_or',
+    'ranges',
     'from_numpy',
     'numpy_arrays',
     'numpy_dtypes',
@@ -19,7 +19,7 @@ from .builtins_ import (
     items_from_dtype,
     lists,
 )
-from .misc import StMinMaxValuesFactory, st_none_or, st_ranges
+from .misc import StMinMaxValuesFactory, none_or, ranges
 from .numpy import (
     from_numpy,
     numpy_arrays,

@@ -1,53 +1,43 @@
-import sys
-from typing import Optional, TypeVar
+from functools import partial
+from typing import Generic, Optional, TypedDict, TypeVar
 
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from hypothesis_awkward.strategies import (
-    StMinMaxValuesFactory,
-    st_none_or,
-    st_ranges,
-)
+from hypothesis_awkward.strategies import StMinMaxValuesFactory, none_or, ranges
 from hypothesis_awkward.util import safe_compare as sc
 from hypothesis_awkward.util import safe_max
-
-if sys.version_info >= (3, 11):
-    from typing import Generic, TypedDict
-else:
-    from typing_extensions import Generic, TypedDict
-
 
 T = TypeVar('T')
 
 
-def st_min_max_start(
+def min_max_starts(
     st_: StMinMaxValuesFactory[T],
 ) -> st.SearchStrategy[tuple[Optional[T], Optional[T]]]:
-    def st_min() -> st.SearchStrategy[Optional[T]]:
-        return st_none_or(st_())
+    def mins() -> st.SearchStrategy[Optional[T]]:
+        return none_or(st_())
 
-    def st_max(min_value: Optional[T]) -> st.SearchStrategy[Optional[T]]:
-        return st_none_or(st_(min_value=min_value))
+    def maxes(min_value: Optional[T]) -> st.SearchStrategy[Optional[T]]:
+        return none_or(st_(min_value=min_value))
 
-    return st_min().flatmap(lambda min_: st.tuples(st.just(min_), st_max(min_)))
+    return mins().flatmap(lambda min_: st.tuples(st.just(min_), maxes(min_)))
 
 
-def st_min_max_end(
+def min_max_ends(
     st_: StMinMaxValuesFactory[T],
     min_start: Optional[T] = None,
 ) -> st.SearchStrategy[tuple[Optional[T], Optional[T]]]:
-    def st_min() -> st.SearchStrategy[Optional[T]]:
-        return st_none_or(st_(min_value=min_start))
+    def mins() -> st.SearchStrategy[Optional[T]]:
+        return none_or(st_(min_value=min_start))
 
-    def st_max(min_value: Optional[T]) -> st.SearchStrategy[Optional[T]]:
+    def maxes(min_value: Optional[T]) -> st.SearchStrategy[Optional[T]]:
         min_value = safe_max((min_value, min_start))
-        return st_none_or(st_(min_value=min_value))
+        return none_or(st_(min_value=min_value))
 
-    return st_min().flatmap(lambda min_: st.tuples(st.just(min_), st_max(min_)))
+    return mins().flatmap(lambda min_: st.tuples(st.just(min_), maxes(min_)))
 
 
-class StRangesKwargs(TypedDict, Generic[T], total=False):
+class RangesKwargs(TypedDict, Generic[T], total=False):
     # st_: StMinMaxValuesFactory[T]
     min_start: Optional[T]
     max_start: Optional[T]
@@ -60,19 +50,19 @@ class StRangesKwargs(TypedDict, Generic[T], total=False):
 
 
 @st.composite
-def st_st_ranges_kwargs(
+def ranges_kwargs(
     draw: st.DrawFn, st_: StMinMaxValuesFactory[T] | None = None
-) -> StRangesKwargs[T]:
+) -> RangesKwargs[T]:
     st_ = st_ or st.integers  # type: ignore
-    kwargs = StRangesKwargs[T]()
+    kwargs = RangesKwargs[T]()
 
-    min_start, max_start = draw(st_min_max_start(st_=st_))  # type: ignore
+    min_start, max_start = draw(min_max_starts(st_=st_))  # type: ignore
     if min_start is not None:
         kwargs['min_start'] = min_start
     if max_start is not None:
         kwargs['max_start'] = max_start
 
-    min_end, max_end = draw(st_min_max_end(st_=st_, min_start=min_start))  # type: ignore
+    min_end, max_end = draw(min_max_ends(st_=st_, min_start=min_start))  # type: ignore
     if min_end is not None:
         kwargs['min_end'] = min_end
     if max_end is not None:
@@ -90,10 +80,13 @@ def st_st_ranges_kwargs(
     return kwargs
 
 
+st_floats = partial(st.floats, allow_nan=False, allow_infinity=False)
+
+
 @given(st.data())
-def test_st_st_ranges_kwargs(data: st.DataObject) -> None:
-    st_ = data.draw(st.sampled_from([None, st.floats]))
-    kwargs = data.draw(st_st_ranges_kwargs(st_=st_))  # type: ignore
+def test_ranges_kwargs(data: st.DataObject) -> None:
+    st_ = data.draw(st.sampled_from([None, st_floats]))
+    kwargs = data.draw(ranges_kwargs(st_=st_))  # type: ignore
 
     min_start = kwargs.get('min_start')
     max_start = kwargs.get('max_start')
@@ -106,13 +99,13 @@ def test_st_st_ranges_kwargs(data: st.DataObject) -> None:
 
 @given(st.data())
 @settings(max_examples=1000)
-def test_st_ranges(data: st.DataObject) -> None:
-    st_ = data.draw(st.sampled_from([None, st.floats]))
-    kwargs = data.draw(st_st_ranges_kwargs(st_=st_))  # type: ignore
+def test_ranges(data: st.DataObject) -> None:
+    st_ = data.draw(st.sampled_from([None, st_floats]))
+    kwargs = data.draw(ranges_kwargs(st_=st_))  # type: ignore
 
     args = (st_,) if st_ is not None else ()
 
-    start, end = data.draw(st_ranges(*args, **kwargs))  # type: ignore
+    start, end = data.draw(ranges(*args, **kwargs))  # type: ignore
 
     allow_start_none = kwargs.get('allow_start_none', True)
     if not allow_start_none:

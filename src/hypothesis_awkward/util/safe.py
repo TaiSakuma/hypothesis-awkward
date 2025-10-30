@@ -83,7 +83,7 @@ class GreaterAndLessThanAny:
     #     return True
 
     def __repr__(self) -> str:
-        return 'GreaterAndLessThanAny()'
+        return f'{self.__class__.__name__}()'
 
 
 def safe_compare(value: T | None) -> T | GreaterAndLessThanAny:
