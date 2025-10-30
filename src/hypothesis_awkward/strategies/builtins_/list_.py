@@ -29,7 +29,7 @@ def lists(
     allow_nan
         Generate potentially `NaN` for relevant dtypes if `True`.
     max_size
-        Maximum list length at any depth.
+        Maximum length of any list at any level of nesting.
     max_depth
         Maximum depth of nested lists.
 
@@ -67,7 +67,7 @@ def from_list(
     allow_nan
         Generate potentially `NaN` for relevant dtypes if `True`.
     max_size
-        Maximum list length at any depth.
+        Maximum length of any list at any level of nesting.
     max_depth
         Maximum depth of nested lists.
 
