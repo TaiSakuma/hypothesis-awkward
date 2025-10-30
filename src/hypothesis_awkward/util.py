@@ -39,8 +39,30 @@ SUPPORTED_DTYPES = tuple[np.dtype, ...](
 )
 
 
-def simple_dtypes_in(d: np.dtype) -> set[np.dtype]:
-    '''Simple dtypes contained in `d`.'''
+def simple_dtypes_in(d: np.dtype, /) -> set[np.dtype]:
+    '''Return simple dtypes contained in a (compound) dtype `d`.
+
+    Parameters
+    ----------
+    d
+        A NumPy dtype. It can be a sub-array or structured dtype as well as a simple
+        dtype.
+
+    Returns
+    -------
+    set of np.dtype
+        Simple dtypes contained in `d`.
+
+    Examples
+    --------
+    >>> simple_dtypes_in(np.dtype('int32'))
+    {dtype('int32')}
+
+    >>> sorted(simple_dtypes_in(np.dtype([('f0', 'i4'), ('f1', 'f8')])))
+    [dtype('int32'), dtype('float64')]
+
+    '''
+
     match d.names, d.kind, d.subdtype, d.fields:
         case None, str(), None, None:
             # Simple dtype
@@ -58,6 +80,27 @@ def simple_dtypes_in(d: np.dtype) -> set[np.dtype]:
             raise TypeError(f'Unexpected dtype: {d}')
 
 
-def simple_dtype_kinds_in(d: np.dtype) -> set[str]:
-    '''Kinds of simple dtypes (e.g. `i`, `f`, `M`) contained in `d`.'''
+def simple_dtype_kinds_in(d: np.dtype, /) -> set[str]:
+    '''Return character codes of simple dtypes contained in a (compound) dtype `d`.
+
+    Parameters
+    ----------
+    d
+        A NumPy dtype. It can be a sub-array or structured dtype as well as a simple
+        dtype.
+
+    Returns
+    -------
+    set of str
+        Character codes of simple dtypes contained in `d`.
+
+    Examples
+    --------
+    >>> simple_dtype_kinds_in(np.dtype('int32'))
+    {'i'}
+
+    >>> sorted(simple_dtype_kinds_in(np.dtype([('f0', 'i4'), ('f1', 'f8')])))
+    ['f', 'i']
+    '''
+
     return {t.kind for t in simple_dtypes_in(d)}
