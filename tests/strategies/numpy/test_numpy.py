@@ -7,7 +7,7 @@ from hypothesis import strategies as st
 
 import awkward as ak
 import hypothesis_awkward.strategies as st_ak
-from hypothesis_awkward.util import simple_dtype_kinds_in
+from hypothesis_awkward.util import any_nan_nat_in_numpy_array, simple_dtype_kinds_in
 
 
 class NumpyArraysKwargs(TypedDict, total=False):
@@ -55,25 +55,13 @@ def test_numpy_arrays(data: st.DataObject) -> None:
     allow_structured = kwargs.get('allow_structured', True)
     allow_nan = kwargs.get('allow_nan', False)
 
-    def _has_nan(n: np.ndarray) -> bool:
-        kind = n.dtype.kind
-        match kind:
-            case 'V':  # structured
-                return any(_has_nan(n[field]) for field in n.dtype.names)
-            case 'f' | 'c':  # float or complex
-                return bool(np.any(np.isnan(n)))
-            case 'm' | 'M':  # timedelta or datetime
-                return bool(np.any(np.isnat(n)))
-            case _:
-                return False
-
     if dtype is not None and not isinstance(dtype, st.SearchStrategy):
         kinds = simple_dtype_kinds_in(n.dtype)
         assert len(kinds) == 1
         assert dtype.kind in kinds
 
     structured = n.dtype.names is not None
-    has_nan = _has_nan(n)
+    has_nan = any_nan_nat_in_numpy_array(n)
 
     if not allow_structured:
         assert not structured

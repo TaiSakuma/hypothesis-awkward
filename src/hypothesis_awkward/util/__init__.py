@@ -3,6 +3,7 @@ __all__ = [
     'SUPPORTED_DTYPE_NAMES',
     'simple_dtypes_in',
     'simple_dtype_kinds_in',
+    'any_nan_nat_in_numpy_array',
 ]
 
 from .dtype import (
@@ -11,3 +12,4 @@ from .dtype import (
     simple_dtype_kinds_in,
     simple_dtypes_in,
 )
+from .numpy import any_nan_nat_in_numpy_array
