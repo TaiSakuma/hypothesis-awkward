@@ -35,8 +35,10 @@ def lists(
 
     Examples
     --------
-    >>> lists().example()
-    [...]
+    >>> l = lists().example()
+    >>> ak.Array(l)
+    <Array ... type='...'>
+
     '''
 
     if dtype is None:
@@ -75,6 +77,7 @@ def from_list(
     --------
     >>> from_list().example()
     <Array ... type='...'>
+
     '''
     return st.builds(
         ak.Array,
