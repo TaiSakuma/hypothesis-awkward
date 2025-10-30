@@ -7,7 +7,11 @@ from hypothesis import strategies as st
 
 import awkward as ak
 import hypothesis_awkward.strategies as st_ak
-from hypothesis_awkward.util import any_nan_nat_in_numpy_array, simple_dtype_kinds_in
+from hypothesis_awkward.util import (
+    any_nan_nat_in_awkward_array,
+    any_nan_nat_in_numpy_array,
+    simple_dtype_kinds_in,
+)
 
 
 class NumpyArraysKwargs(TypedDict, total=False):
@@ -189,29 +193,9 @@ def test_from_numpy(data: st.DataObject) -> None:
         assert isinstance(layout, ak.contents.RecordArray)  # structured array
         return True
 
-    def _has_nan(
-        a: ak.Array | ak.contents.RecordArray | ak.contents.NumpyArray,
-    ) -> bool:
-        match a:
-            case ak.Array():
-                return _has_nan(a.layout)
-            case ak.contents.RecordArray():
-                return any(_has_nan(a[field]) for field in a.fields)
-            case ak.contents.NumpyArray():
-                arr = a.data
-                kind = arr.dtype.kind
-                if kind in {'f', 'c'}:
-                    return bool(np.any(np.isnan(arr)))
-                elif kind in {'m', 'M'}:
-                    return bool(np.any(np.isnat(arr)))
-                else:
-                    return False
-            case _:
-                raise TypeError(f'Unexpected type: {type(a)}')
-
     dtypes = _leaf_dtypes(a)
     structured = _is_structured(a)
-    has_nan = _has_nan(a)
+    has_nan = any_nan_nat_in_awkward_array(a)
     note(f'{dtypes=}')
     note(f'{structured=}')
     note(f'{has_nan=}')
