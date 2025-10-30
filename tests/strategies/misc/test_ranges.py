@@ -1,5 +1,6 @@
+import sys
 from functools import partial
-from typing import Generic, Optional, TypedDict, TypeVar
+from typing import Optional, TypeVar
 
 from hypothesis import given, settings
 from hypothesis import strategies as st
@@ -7,6 +8,11 @@ from hypothesis import strategies as st
 from hypothesis_awkward.strategies import StMinMaxValuesFactory, none_or, ranges
 from hypothesis_awkward.util import safe_compare as sc
 from hypothesis_awkward.util import safe_max
+
+if sys.version_info >= (3, 11):
+    from typing import Generic, TypedDict
+else:
+    from typing_extensions import Generic, TypedDict
 
 T = TypeVar('T')
 
