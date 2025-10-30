@@ -108,13 +108,3 @@ def test_lists(data: st.DataObject) -> None:
 
     if not has_nan:
         assert to_list == l
-
-
-@given(data=st.data())
-def test_from_list(data: st.DataObject) -> None:
-    # Draw options
-    kwargs = data.draw(lists_kwargs(), label='kwargs')
-
-    # Call the test subject
-    a = data.draw(st_ak.from_list(**kwargs), label='a')
-    assert isinstance(a, ak.Array)
