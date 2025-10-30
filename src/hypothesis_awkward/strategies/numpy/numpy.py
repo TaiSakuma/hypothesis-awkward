@@ -29,6 +29,7 @@ def numpy_arrays(
     >>> n = numpy_arrays().example()
     >>> ak.from_numpy(n)
     <Array ... type='...'>
+
     '''
 
     return st_np.arrays(
@@ -58,8 +59,11 @@ def from_numpy(
 
     Examples
     --------
-    >>> a = from_numpy().example()
+    >>> from_numpy().example()
+    <Array ... type='...'>
+
     '''
+
     return st.builds(
         ak.from_numpy,
         numpy_arrays(
