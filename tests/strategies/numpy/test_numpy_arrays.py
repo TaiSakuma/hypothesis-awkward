@@ -1,4 +1,4 @@
-from typing import TypedDict
+from typing import TypedDict, cast
 
 import numpy as np
 import pytest
@@ -18,27 +18,20 @@ class NumpyArraysKwargs(TypedDict, total=False):
     allow_nan: bool
 
 
-@st.composite
-def numpy_arrays_kwargs(draw: st.DrawFn) -> NumpyArraysKwargs:
-    '''Strategy for options to `numpy_arrays()` strategy.'''
-    kwargs = NumpyArraysKwargs()
-
-    if draw(st.booleans()):
-        kwargs['dtype'] = draw(
-            st.one_of(
+def numpy_arrays_kwargs() -> st.SearchStrategy[NumpyArraysKwargs]:
+    '''Strategy for options for `numpy_arrays()` strategy.'''
+    return st.fixed_dictionaries(
+        {},
+        optional={
+            'dtype': st.one_of(
                 st.none(),
                 st.just(st_ak.supported_dtypes()),
                 st_ak.supported_dtypes(),
-            )
-        )
-
-    if draw(st.booleans()):
-        kwargs['allow_structured'] = draw(st.booleans())
-
-    if draw(st.booleans()):
-        kwargs['allow_nan'] = draw(st.booleans())
-
-    return kwargs
+            ),
+            'allow_structured': st.booleans(),
+            'allow_nan': st.booleans(),
+        },
+    ).map(lambda d: cast(NumpyArraysKwargs, d))
 
 
 @settings(max_examples=200)

@@ -1,4 +1,4 @@
-from typing import TypedDict
+from typing import TypedDict, cast
 
 import numpy as np
 from hypothesis import given, note, settings
@@ -17,27 +17,20 @@ class FromNumpyKwargs(TypedDict, total=False):
     allow_nan: bool
 
 
-@st.composite
-def from_numpy_kwargs(draw: st.DrawFn) -> FromNumpyKwargs:
-    '''Strategy for options to `from_numpy()` strategy.'''
-    kwargs = FromNumpyKwargs()
-
-    if draw(st.booleans()):
-        kwargs['dtype'] = draw(
-            st.one_of(
+def from_numpy_kwargs() -> st.SearchStrategy[FromNumpyKwargs]:
+    '''Strategy for options for `from_numpy()` strategy.'''
+    return st.fixed_dictionaries(
+        {},
+        optional={
+            'dtype': st.one_of(
                 st.none(),
                 st.just(st_ak.supported_dtypes()),
                 st_ak.supported_dtypes(),
-            )
-        )
-
-    if draw(st.booleans()):
-        kwargs['allow_structured'] = draw(st.booleans())
-
-    if draw(st.booleans()):
-        kwargs['allow_nan'] = draw(st.booleans())
-
-    return kwargs
+            ),
+            'allow_structured': st.booleans(),
+            'allow_nan': st.booleans(),
+        },
+    ).map(lambda d: cast(FromNumpyKwargs, d))
 
 
 @settings(max_examples=200)

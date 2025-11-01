@@ -1,4 +1,4 @@
-from typing import TypedDict
+from typing import TypedDict, cast
 
 import numpy as np
 from hypothesis import given, settings
@@ -17,27 +17,20 @@ class FromListsKwargs(TypedDict, total=False):
     max_size: int
 
 
-@st.composite
-def from_lists_kwargs(draw: st.DrawFn) -> FromListsKwargs:
+def from_lists_kwargs() -> st.SearchStrategy[FromListsKwargs]:
     '''Strategy for options for `from_list()` strategy.'''
-    kwargs = FromListsKwargs()
-
-    if draw(st.booleans()):
-        kwargs['dtype'] = draw(
-            st.one_of(
+    return st.fixed_dictionaries(
+        {},
+        optional={
+            'dtype': st.one_of(
                 st.none(),
                 st.just(st_ak.builtin_safe_dtypes()),
                 st_ak.builtin_safe_dtypes(),
-            )
-        )
-
-    if draw(st.booleans()):
-        kwargs['allow_nan'] = draw(st.booleans())
-
-    if draw(st.booleans()):
-        kwargs['max_size'] = draw(st.integers(min_value=0, max_value=25))
-
-    return kwargs
+            ),
+            'allow_nan': st.booleans(),
+            'max_size': st.integers(min_value=0, max_value=25),
+        },
+    ).map(lambda d: cast(FromListsKwargs, d))
 
 
 @settings(max_examples=200)

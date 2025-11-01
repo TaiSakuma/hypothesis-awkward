@@ -1,4 +1,4 @@
-from typing import TypedDict
+from typing import TypedDict, cast
 
 import numpy as np
 from hypothesis import given
@@ -26,24 +26,19 @@ class NumpyDtypesKwargs(TypedDict, total=False):
     allow_array: bool
 
 
-@st.composite
-def numpy_dtypes_kwargs(draw: st.DrawFn) -> NumpyDtypesKwargs:
-    '''Strategy for options to `numpy_dtypes()` strategy.'''
-    kwargs = NumpyDtypesKwargs()
-
-    if draw(st.booleans()):
-        kwargs['dtype'] = draw(
-            st.one_of(
+def numpy_dtypes_kwargs() -> st.SearchStrategy[NumpyDtypesKwargs]:
+    '''Strategy for options for `numpy_dtypes()` strategy.'''
+    return st.fixed_dictionaries(
+        {},
+        optional={
+            'dtype': st.one_of(
                 st.none(),
                 st.just(st_ak.supported_dtypes()),
                 st_ak.supported_dtypes(),
-            )
-        )
-
-    if draw(st.booleans()):
-        kwargs['allow_array'] = draw(st.booleans())
-
-    return kwargs
+            ),
+            'allow_array': st.booleans(),
+        },
+    ).map(lambda d: cast(NumpyDtypesKwargs, d))
 
 
 @given(data=st.data())
