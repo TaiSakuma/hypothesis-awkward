@@ -10,6 +10,8 @@ from hypothesis_awkward.util import any_nan_nat_in_numpy_array
 
 
 class FromListsKwargs(TypedDict, total=False):
+    '''Options for `from_list()` strategy.'''
+
     dtype: np.dtype | st.SearchStrategy[np.dtype] | None
     allow_nan: bool
     max_size: int
@@ -17,6 +19,7 @@ class FromListsKwargs(TypedDict, total=False):
 
 @st.composite
 def from_lists_kwargs(draw: st.DrawFn) -> FromListsKwargs:
+    '''Strategy for options for `from_list()` strategy.'''
     kwargs = FromListsKwargs()
 
     if draw(st.booleans()):

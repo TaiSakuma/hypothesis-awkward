@@ -10,6 +10,8 @@ import hypothesis_awkward.strategies as st_ak
 
 
 class ListsKwargs(TypedDict, total=False):
+    '''Options for `lists()` strategy.'''
+
     dtype: np.dtype | st.SearchStrategy[np.dtype] | None
     allow_nan: bool
     max_size: int
@@ -17,6 +19,7 @@ class ListsKwargs(TypedDict, total=False):
 
 @st.composite
 def lists_kwargs(draw: st.DrawFn) -> ListsKwargs:
+    '''Strategy for options for `lists()` strategy.'''
     kwargs = ListsKwargs()
 
     if draw(st.booleans()):
