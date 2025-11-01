@@ -15,6 +15,7 @@ class FromNumpyKwargs(TypedDict, total=False):
     dtype: np.dtype | st.SearchStrategy[np.dtype] | None
     allow_structured: bool
     allow_nan: bool
+    max_size: int
 
 
 def from_numpy_kwargs() -> st.SearchStrategy[FromNumpyKwargs]:
@@ -29,6 +30,7 @@ def from_numpy_kwargs() -> st.SearchStrategy[FromNumpyKwargs]:
             ),
             'allow_structured': st.booleans(),
             'allow_nan': st.booleans(),
+            'max_size': st.integers(min_value=0, max_value=100),
         },
     ).map(lambda d: cast(FromNumpyKwargs, d))
 
@@ -47,6 +49,7 @@ def test_from_numpy(data: st.DataObject) -> None:
     dtype = kwargs.get('dtype', None)
     allow_structured = kwargs.get('allow_structured', True)
     allow_nan = kwargs.get('allow_nan', False)
+    max_size = kwargs.get('max_size', 10)
 
     def _leaf_dtypes(a: ak.Array) -> set[np.dtype]:
         '''Dtypes of leaf NumPy arrays contained in `a`.'''
@@ -72,12 +75,31 @@ def test_from_numpy(data: st.DataObject) -> None:
         assert isinstance(layout, ak.contents.RecordArray)  # structured array
         return True
 
+    def _size(a: ak.Array) -> int:
+        ret = 0
+
+        def _visitor(layout):
+            nonlocal ret
+            match layout:
+                case ak.contents.NumpyArray():
+                    ret += layout.data.size
+                case ak.contents.RecordArray():
+                    for c in layout.contents:
+                        _visitor(c)
+                case _:
+                    raise TypeError(f'Unexpected type: {type(layout)}')
+
+        _visitor(a.layout)
+        return ret
+
     dtypes = _leaf_dtypes(a)
     structured = _is_structured(a)
     has_nan = any_nan_nat_in_awkward_array(a)
+    size = _size(a)
     note(f'{dtypes=}')
     note(f'{structured=}')
     note(f'{has_nan=}')
+    note(f'{size=}')
 
     if dtype is not None and not isinstance(dtype, st.SearchStrategy):
         assert len(dtypes) == 1
@@ -88,3 +110,5 @@ def test_from_numpy(data: st.DataObject) -> None:
 
     if not allow_nan:
         assert not has_nan
+
+    assert size <= max_size
