@@ -2,7 +2,11 @@ import numpy as np
 from hypothesis import strategies as st
 from hypothesis.extra import numpy as st_np
 
-from hypothesis_awkward.util import SUPPORTED_DTYPE_NAMES, SUPPORTED_DTYPES
+from hypothesis_awkward.util import (
+    SUPPORTED_DTYPE_NAMES,
+    SUPPORTED_DTYPES,
+    n_scalars_in,
+)
 
 
 def supported_dtype_names() -> st.SearchStrategy[str]:
@@ -30,6 +34,7 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
 def numpy_dtypes(
     dtype: np.dtype | st.SearchStrategy[np.dtype] | None = None,
     allow_array: bool = True,
+    max_size: int = 5,
 ) -> st.SearchStrategy[np.dtype]:
     '''Strategy for dtypes (simple or array) supported by Awkward Array.
 
@@ -45,6 +50,8 @@ def numpy_dtypes(
         array elements. If `None`, any supported simple dtype is used.
     allow_array
         Generate only simple dtypes if `False`, else array dtypes as well.
+    max_size
+        Maximum number of scalars in a structured dtype.
 
     Examples
     --------
@@ -57,4 +64,6 @@ def numpy_dtypes(
         dtype = st.just(dtype)
     if not allow_array:
         return dtype
-    return st_np.array_dtypes(subtype_strategy=dtype, allow_subarrays=True)
+    return st_np.array_dtypes(
+        subtype_strategy=dtype, max_size=max_size, allow_subarrays=True
+    ).filter(lambda d: n_scalars_in(d) <= max_size)
