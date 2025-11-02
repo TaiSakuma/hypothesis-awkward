@@ -1,4 +1,4 @@
-from typing import Any, TypeAlias
+from typing import Any
 
 import numpy as np
 from hypothesis import strategies as st
@@ -65,7 +65,3 @@ def items_from_dtype(
     )
     # Reject if the item is coerced to `int` when `dtype` is not integer.
     # This could happen for `datetime64` and `timedelta64` dtypes.
-
-
-NestedList: TypeAlias = 'list[Any | NestedList]'
-
