@@ -4,6 +4,8 @@ from hypothesis import strategies as st
 
 from hypothesis_awkward.util import safe_max, safe_min
 
+from .idiom import none_or
+
 T = TypeVar('T')
 
 
@@ -11,16 +13,6 @@ class StMinMaxValuesFactory(Protocol[T]):  # pragma: no cover
     def __call__(
         self, min_value: Optional[T] = None, max_value: Optional[T] = None
     ) -> st.SearchStrategy[T]: ...
-
-
-def none_or(st_: st.SearchStrategy[T]) -> st.SearchStrategy[Optional[T]]:
-    '''A strategy for `None` or values from another strategy.
-
-    >>> v = none_or(st.integers()).example()
-    >>> v is None or isinstance(v, int)
-    True
-    '''
-    return st.one_of(st.none(), st_)
 
 
 def ranges(
@@ -86,6 +78,4 @@ def ranges(
             _st = _st.filter(lambda x: x > start)  # type: ignore
         return none_or(_st) if allow_end_none else _st
 
-    return starts().flatmap(
-        lambda start: st.tuples(st.just(start), ends(start=start))
-    )
+    return starts().flatmap(lambda start: st.tuples(st.just(start), ends(start=start)))
