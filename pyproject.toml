@@ -1,10 +1,10 @@
 [build-system]
-requires = ["uv_build>=0.9.3,<0.10.0"]
-build-backend = "uv_build"
+requires = ["hatchling", "hatch-regex-commit"]
+build-backend = "hatchling.build"
 
 [project]
 name = "hypothesis-awkward"
-version = "0.0.1"
+dynamic = ["version"]
 description = "Hypothesis strategies for Awkward Array"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -32,6 +32,12 @@ arrow = ["pyarrow>=22.0"]
 
 [dependency-groups]
 dev = ["mypy>=1.18", "pytest>=9.0", "pytest-cov>=7.0", "ruff>=0.14.1"]
+
+[tool.hatch.version]
+source = "regex_commit"
+path = "src/hypothesis_awkward/__about__.py"
+check_dirty = false
+tag_sign = false
 
 [tool.pytest]
 addopts = ["--doctest-modules", "--doctest-glob='*.md'"]
