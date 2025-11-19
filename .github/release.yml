@@ -1,0 +1,10 @@
+changelog:
+  exclude:
+    authors:
+      - "dependabot[bot]"
+    labels:
+      - "dependencies"
+  categories:
+    - title: Changes 🚀
+      labels:
+        - "*"
