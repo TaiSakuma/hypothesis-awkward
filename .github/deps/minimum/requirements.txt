@@ -1,0 +1,9 @@
+# Pinned oldest supported versions of dependencies.
+# Used in GitHub Actions for testing compatibility.
+# Must be manually updated to align with `pyproject.toml`.
+awkward==2.8.0
+pandas==2.3.0
+pyarrow==22.0.0
+
+# In the future, `pip` may install minimum versions from
+# `pyproject.toml` directly: https://github.com/pypa/pip/issues/8085

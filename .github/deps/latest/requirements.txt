@@ -1,0 +1,6 @@
+# Pinned latest versions of dependencies.
+# Used in GitHub Actions for testing compatibility.
+# Monitored by Dependabot.
+awkward==2.8.10
+pandas==2.3.3
+pyarrow==22.0.0
