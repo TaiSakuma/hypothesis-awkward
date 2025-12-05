@@ -5,16 +5,16 @@ _Hypothesis strategies for Awkward Arrays._
 [![PyPI - Version](https://img.shields.io/pypi/v/hypothesis-awkward.svg)](https://pypi.org/project/hypothesis-awkward)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/hypothesis-awkward.svg)](https://pypi.org/project/hypothesis-awkward)
 
-[![Test Status](https://github.com/TaiSakuma/hypothesis-awkward/actions/workflows/unit-test.yml/badge.svg)](https://github.com/nextline-dev/apluggy/actions/workflows/unit-test.yml)
+[![Test Status](https://github.com/TaiSakuma/hypothesis-awkward/actions/workflows/unit-test.yml/badge.svg)](https://github.com/TaiSakuma/hypothesis-awkward/actions/workflows/unit-test.yml)
 [![codecov](https://codecov.io/gh/TaiSakuma/hypothesis-awkward/graph/badge.svg?token=cffic9D2b3)](https://codecov.io/gh/TaiSakuma/hypothesis-awkward)
 
 [Hypothesis](https://hypothesis.works/) is a _property-based testing_ library.
 Its
 [_strategies_](https://hypothesis.readthedocs.io/en/latest/reference/strategies.html)
-are Python functions that strategically generate test data that fail in _pytest_
-or other testing frameworks. Once a test fails, Hypothesis searches for the
-simplest sample that causes the same error. Hypothesis automatically explores
-edge cases; you do not need to come up with test data manually.
+are Python functions that strategically generate test data that can fail in
+_pytest_ or other testing frameworks. Once a test fails, Hypothesis searches for
+the simplest sample that causes the same error. Hypothesis automatically
+explores edge cases; you do not need to come up with test data manually.
 
 Hypothesis itself includes strategies for
 [NumPy](https://hypothesis.readthedocs.io/en/latest/reference/strategies.html#numpy)
@@ -81,7 +81,7 @@ NumPy"](https://awkward-array.org/doc/2.8/user-guide/how-to-convert-numpy.html).
 | Strategy                | Data type                                                      |
 | ----------------------- | -------------------------------------------------------------- |
 | `from_numpy`            | Awkward Arrays created from NumPy arrays                       |
-| `numpy_arrays`          | NumPy arrays that can be converted to Awkward Arrays           |
+| `numpy_arrays`          | NumPy arrays that can be converted to Awkward Array           |
 | `numpy_dtypes`          | NumPy dtypes (simple or array) supported by Awkward Array      |
 | `supported_dtypes`      | NumPy dtypes (simple only) supported by Awkward Array          |
 | `supported_dtype_names` | Names of NumPy dtypes (simple only) supported by Awkward Array |
@@ -107,5 +107,5 @@ general Awkward Arrays with the [_array
 builder_](https://awkward-array.org/doc/2.8/user-guide/how-to-create-arraybuilder.html)
 and [_direct
 constructors_](https://awkward-array.org/doc/2.8/user-guide/how-to-create-constructors.html),
-which would be useful for closing rare edge cases in developing tools that use
-Awkward Array and even Awkward Array itself.
+which would help close in on edge cases in developing tools that use Awkward
+Array and even Awkward Array itself.
