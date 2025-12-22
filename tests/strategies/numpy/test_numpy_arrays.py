@@ -3,7 +3,7 @@ from typing import TypedDict, cast
 
 import numpy as np
 import pytest
-from hypothesis import given, note, settings
+from hypothesis import Phase, find, given, note, settings
 from hypothesis import strategies as st
 
 import awkward as ak
@@ -117,3 +117,12 @@ def test_numpy_arrays(data: st.DataObject) -> None:
     else:
         with pytest.raises(ValueError):
             a.to_numpy()
+
+
+def test_draw_structured() -> None:
+    '''Assert that structured arrays can be drawn by default.'''
+    find(
+        st_ak.numpy_arrays(),
+        lambda a: a.dtype.names is not None,
+        settings=settings(phases=[Phase.generate]),
+    )
