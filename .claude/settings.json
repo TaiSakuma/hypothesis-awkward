@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "file_path=$(jq -r '.tool_input.file_path'); if [[ \"$file_path\" == *.md ]]; then dprint fmt \"$file_path\"; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
