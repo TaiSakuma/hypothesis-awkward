@@ -3,4 +3,4 @@
 # Monitored by Dependabot.
 awkward==2.8.11
 pandas==2.3.3
-pyarrow==22.0.0
+pyarrow==23.0.0
