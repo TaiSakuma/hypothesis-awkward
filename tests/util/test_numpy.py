@@ -55,6 +55,7 @@ def _has_nan_nat_via_iteration(n: np.ndarray) -> bool:
 def _has_nan_via_iteration(n: np.ndarray) -> bool:
     '''Check for NaN by iterating over flattened array.'''
     for val in n.flat:
+        assert isinstance(val, (float, complex, np.generic, np.ndarray))
         if _is_nan(val):
             return True
     return False
@@ -63,6 +64,7 @@ def _has_nan_via_iteration(n: np.ndarray) -> bool:
 def _has_nat_via_iteration(n: np.ndarray) -> bool:
     '''Check for NaT by iterating over flattened array.'''
     for val in n.flat:
+        assert isinstance(val, (float, complex, np.generic, np.ndarray))
         if _is_nat(val):
             return True
     return False
