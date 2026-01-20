@@ -8,7 +8,12 @@ from hypothesis import strategies as st
 
 import awkward as ak
 import hypothesis_awkward.strategies as st_ak
-from hypothesis_awkward.util import any_nan_nat_in_numpy_array, simple_dtype_kinds_in
+from hypothesis_awkward.util import (
+    any_nan_in_numpy_array,
+    any_nan_nat_in_numpy_array,
+    any_nat_in_numpy_array,
+    simple_dtype_kinds_in,
+)
 
 
 class NumpyArraysKwargs(TypedDict, total=False):
@@ -125,4 +130,22 @@ def test_draw_structured() -> None:
         st_ak.numpy_arrays(),
         lambda a: a.dtype.names is not None,
         settings=settings(phases=[Phase.generate]),
+    )
+
+
+def test_draw_nan() -> None:
+    '''Assert that arrays with NaN can be drawn when allowed.'''
+    find(
+        st_ak.numpy_arrays(allow_nan=True),
+        lambda a: any_nan_in_numpy_array(a),
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
+
+
+def test_draw_nat() -> None:
+    '''Assert that arrays with NaT can be drawn when allowed.'''
+    find(
+        st_ak.numpy_arrays(allow_nan=True),
+        lambda a: any_nat_in_numpy_array(a),
+        settings=settings(phases=[Phase.generate], max_examples=2000),
     )
