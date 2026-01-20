@@ -73,3 +73,7 @@ import hypothesis_awkward.strategies as st_ak
 
 Tests mirror the source structure under `tests/`. The project uses pytest with
 doctest support for examples in docstrings and markdown files.
+
+## Code Style
+
+- Use single quotes (`'''`) for docstrings.
