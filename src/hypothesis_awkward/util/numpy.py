@@ -32,14 +32,16 @@ def any_nan_nat_in_numpy_array(n: np.ndarray, /) -> bool:
     True
 
     '''
-
-    kind = n.dtype.kind
-    match kind:
-        case 'V':  # structured
-            return any(any_nan_nat_in_numpy_array(n[field]) for field in n.dtype.names)
-        case 'f' | 'c':  # float or complex
-            return bool(np.any(np.isnan(n)))
-        case 'm' | 'M':  # timedelta or datetime
-            return bool(np.any(np.isnat(n)))
-        case _:
-            return False
+    stack = [n]
+    while stack:
+        arr = stack.pop()
+        match arr.dtype.kind:
+            case 'V':  # structured
+                stack.extend(arr[field] for field in arr.dtype.names)
+            case 'f' | 'c':  # float or complex
+                if np.any(np.isnan(arr)):
+                    return True
+            case 'm' | 'M':  # timedelta or datetime
+                if np.any(np.isnat(arr)):
+                    return True
+    return False
