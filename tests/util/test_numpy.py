@@ -14,7 +14,7 @@ _ArrayElement: TypeAlias = float | complex | np.generic | NDArray[np.generic]
 
 @given(data=st.data())
 def test_any_nan_nat_in_numpy_array(data: st.DataObject) -> None:
-    '''Result should match element-by-element iteration.'''
+    '''Verify result matches element-by-element iteration.'''
     allow_nan = data.draw(st.booleans())
     n = data.draw(
         st_np.arrays(
@@ -50,7 +50,7 @@ def test_draw_nat() -> None:
 
 
 def _has_nan_nat_via_iteration(n: np.ndarray) -> bool:
-    '''Check for NaN/NaT by iterating over flattened array.'''
+    '''Check if array contains any NaN or NaT.'''
     return _has_nan_via_iteration(n) or _has_nat_via_iteration(n)
 
 
