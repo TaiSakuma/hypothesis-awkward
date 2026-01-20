@@ -78,3 +78,4 @@ doctest support for examples in docstrings and markdown files.
 
 - Use single quotes (`'''`) for docstrings.
 - Prefer single quotes (`'`) for strings.
+- Run `uv run mypy src tests` after making changes to verify type correctness.
