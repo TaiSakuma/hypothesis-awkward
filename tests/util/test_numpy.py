@@ -10,27 +10,36 @@ from hypothesis_awkward.util import any_nan_nat_in_numpy_array
 
 def _is_nan(val: object) -> bool:
     '''Check if a single value is NaN.'''
-    if isinstance(val, (complex, np.complexfloating)):
-        return math.isnan(val.real) or math.isnan(val.imag)
-    elif isinstance(val, (float, np.floating)):
-        return math.isnan(val)
-    elif isinstance(val, np.ndarray):
-        return any(_is_nan(item) for item in val.flat)
-    elif isinstance(val, np.void):
-        if val.dtype.names is not None:
-            return any(_is_nan(val[field]) for field in val.dtype.names)
+    stack: list[object] = [val]
+    while stack:
+        v = stack.pop()
+        if isinstance(v, (complex, np.complexfloating)):
+            if math.isnan(v.real) or math.isnan(v.imag):
+                return True
+        elif isinstance(v, (float, np.floating)):
+            if math.isnan(v):
+                return True
+        elif isinstance(v, np.ndarray):
+            stack.extend(v.flat)
+        elif isinstance(v, np.void):
+            if v.dtype.names is not None:
+                stack.extend(v[field] for field in v.dtype.names)
     return False
 
 
 def _is_nat(val: object) -> bool:
     '''Check if a single value is NaT.'''
-    if isinstance(val, (np.datetime64, np.timedelta64)):
-        return np.isnat(val)
-    elif isinstance(val, np.ndarray):
-        return any(_is_nat(item) for item in val.flat)
-    elif isinstance(val, np.void):
-        if val.dtype.names is not None:
-            return any(_is_nat(val[field]) for field in val.dtype.names)
+    stack: list[object] = [val]
+    while stack:
+        v = stack.pop()
+        if isinstance(v, (np.datetime64, np.timedelta64)):
+            if np.isnat(v):
+                return True
+        elif isinstance(v, np.ndarray):
+            stack.extend(v.flat)
+        elif isinstance(v, np.void):
+            if v.dtype.names is not None:
+                stack.extend(v[field] for field in v.dtype.names)
     return False
 
 
