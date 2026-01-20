@@ -1,16 +1,20 @@
 import math
+from typing import TypeAlias
 
 import numpy as np
 from hypothesis import Phase, find, given, settings
 from hypothesis import strategies as st
 from hypothesis.extra import numpy as st_np
+from numpy.typing import NDArray
 
 from hypothesis_awkward.util import any_nan_nat_in_numpy_array
 
+_ArrayElement: TypeAlias = float | complex | np.generic | NDArray[np.generic]
 
-def _is_nan(val: object) -> bool:
+
+def _is_nan(val: _ArrayElement) -> bool:
     '''Check if val contains any NaN.'''
-    stack: list[object] = [val]
+    stack: list[_ArrayElement] = [val]
     while stack:
         v = stack.pop()
         if isinstance(v, (complex, np.complexfloating)):
@@ -27,9 +31,9 @@ def _is_nan(val: object) -> bool:
     return False
 
 
-def _is_nat(val: object) -> bool:
+def _is_nat(val: _ArrayElement) -> bool:
     '''Check if val contains any NaT.'''
-    stack: list[object] = [val]
+    stack: list[_ArrayElement] = [val]
     while stack:
         v = stack.pop()
         if isinstance(v, (np.datetime64, np.timedelta64)):
