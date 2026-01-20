@@ -7,7 +7,11 @@ from hypothesis import strategies as st
 from hypothesis.extra import numpy as st_np
 from numpy.typing import NDArray
 
-from hypothesis_awkward.util import any_nan_nat_in_numpy_array
+from hypothesis_awkward.util import (
+    any_nan_in_numpy_array,
+    any_nan_nat_in_numpy_array,
+    any_nat_in_numpy_array,
+)
 
 _ArrayElement: TypeAlias = float | complex | np.generic | NDArray[np.generic]
 
@@ -28,6 +32,38 @@ def test_any_nan_nat_in_numpy_array(data: st.DataObject) -> None:
         expected = _has_nan_nat_via_iteration(n)
     else:
         expected = False
+    assert actual == expected
+
+
+@given(data=st.data())
+def test_any_nan_in_numpy_array(data: st.DataObject) -> None:
+    '''Verify result matches element-by-element iteration.'''
+    allow_nan = data.draw(st.booleans())
+    n = data.draw(
+        st_np.arrays(
+            dtype=st_np.nested_dtypes(),
+            shape=st_np.array_shapes(),
+            elements={'allow_nan': allow_nan},
+        )
+    )
+    actual = any_nan_in_numpy_array(n)
+    expected = _has_nan_via_iteration(n) if allow_nan else False
+    assert actual == expected
+
+
+@given(data=st.data())
+def test_any_nat_in_numpy_array(data: st.DataObject) -> None:
+    '''Verify result matches element-by-element iteration.'''
+    allow_nan = data.draw(st.booleans())
+    n = data.draw(
+        st_np.arrays(
+            dtype=st_np.nested_dtypes(),
+            shape=st_np.array_shapes(),
+            elements={'allow_nan': allow_nan},
+        )
+    )
+    actual = any_nat_in_numpy_array(n)
+    expected = _has_nat_via_iteration(n) if allow_nan else False
     assert actual == expected
 
 
