@@ -8,26 +8,6 @@ from hypothesis.extra import numpy as st_np
 from hypothesis_awkward.util import any_nan_nat_in_numpy_array
 
 
-def _is_nan_nat(val: object) -> bool:
-    '''Check if a single value is NaN or NaT.'''
-    if isinstance(val, (complex, np.complexfloating)):
-        return math.isnan(val.real) or math.isnan(val.imag)
-    elif isinstance(val, (float, np.floating)):
-        return math.isnan(val)
-    elif isinstance(val, (np.datetime64, np.timedelta64)):
-        return np.isnat(val)
-    elif isinstance(val, np.ndarray):
-        for item in val.flat:
-            if _is_nan_nat(item):
-                return True
-    elif isinstance(val, np.void):
-        if val.dtype.names is not None:
-            for field in val.dtype.names:
-                if _is_nan_nat(val[field]):
-                    return True
-    return False
-
-
 def _is_nan(val: object) -> bool:
     '''Check if a single value is NaN.'''
     if isinstance(val, (complex, np.complexfloating)):
@@ -56,10 +36,7 @@ def _is_nat(val: object) -> bool:
 
 def _has_nan_nat_via_iteration(n: np.ndarray) -> bool:
     '''Check for NaN/NaT by iterating over flattened array.'''
-    for val in n.flat:
-        if _is_nan_nat(val):
-            return True
-    return False
+    return _has_nan_via_iteration(n) or _has_nat_via_iteration(n)
 
 
 def _has_nan_via_iteration(n: np.ndarray) -> bool:
