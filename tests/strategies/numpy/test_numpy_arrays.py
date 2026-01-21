@@ -149,3 +149,21 @@ def test_draw_nat() -> None:
         lambda a: any_nat_in_numpy_array(a),
         settings=settings(phases=[Phase.generate], max_examples=2000),
     )
+
+
+def test_draw_empty() -> None:
+    '''Assert that empty arrays can be drawn by default.'''
+    find(
+        st_ak.numpy_arrays(),
+        lambda a: math.prod(a.shape) == 0,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
+
+
+def test_draw_max_size() -> None:
+    '''Assert that arrays with max_size elements can be drawn by default.'''
+    find(
+        st_ak.numpy_arrays(allow_structured=False),
+        lambda a: math.prod(a.shape) == 10,  # default max_size is 10
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
