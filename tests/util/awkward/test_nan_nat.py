@@ -9,8 +9,8 @@ from hypothesis_awkward.util import (
     any_nan_in_awkward_array,
     any_nan_nat_in_awkward_array,
     any_nat_in_awkward_array,
-    iter_numpy_arrays,
 )
+from hypothesis_awkward.util.awkward import iter_leaf_contents
 from tests.util.awkward.conftest import st_arrays
 
 
@@ -78,7 +78,10 @@ def _expected_any_nan_nat(a: ak.Array) -> bool:
 
 def _expected_any_nan(a: ak.Array) -> bool:
     '''Check if array contains any NaN.'''
-    for arr in iter_numpy_arrays(a):
+    for content in iter_leaf_contents(a):
+        if not isinstance(content, ak.contents.NumpyArray):
+            continue
+        arr = content.data
         match arr.dtype.kind:
             case 'c':
                 if any(
@@ -93,7 +96,10 @@ def _expected_any_nan(a: ak.Array) -> bool:
 
 def _expected_any_nat(a: ak.Array) -> bool:
     '''Check if array contains any NaT.'''
-    for arr in iter_numpy_arrays(a):
+    for content in iter_leaf_contents(a):
+        if not isinstance(content, ak.contents.NumpyArray):
+            continue
+        arr = content.data
         if arr.dtype.kind not in {'m', 'M'}:
             continue
         if any(np.isnat(val) for val in arr.flat):
