@@ -4,22 +4,25 @@ import awkward as ak
 
 
 def any_nan_nat_in_awkward_array(
-    a: ak.Array | ak.contents.RecordArray | ak.contents.NumpyArray,
+    a: ak.Array | ak.contents.Content,
     /,
 ) -> bool:
-    match a:
-        case ak.Array():
-            return any_nan_nat_in_awkward_array(a.layout)
-        case ak.contents.RecordArray():
-            return any(any_nan_nat_in_awkward_array(a[field]) for field in a.fields)
-        case ak.contents.NumpyArray():
-            arr = a.data
-            kind = arr.dtype.kind
-            if kind in {'f', 'c'}:
-                return bool(np.any(np.isnan(arr)))
-            elif kind in {'m', 'M'}:
-                return bool(np.any(np.isnat(arr)))
-            else:
-                return False
-        case _:
-            raise TypeError(f'Unexpected type: {type(a)}')
+    stack: list[ak.Array | ak.contents.Content] = [a]
+    while stack:
+        item = stack.pop()
+        match item:
+            case ak.Array():
+                stack.append(item.layout)
+            case ak.contents.RecordArray():
+                for field in item.fields:
+                    stack.append(item[field])
+            case ak.contents.NumpyArray():
+                arr = item.data
+                kind = arr.dtype.kind
+                if kind in {'f', 'c'} and np.any(np.isnan(arr)):
+                    return True
+                if kind in {'m', 'M'} and np.any(np.isnat(arr)):
+                    return True
+            case _:
+                raise TypeError(f'Unexpected type: {type(item)}')
+    return False
