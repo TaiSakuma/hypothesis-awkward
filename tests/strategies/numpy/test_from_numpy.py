@@ -1,12 +1,16 @@
 from typing import TypedDict, cast
 
 import numpy as np
-from hypothesis import given, note, settings
+from hypothesis import Phase, find, given, note, settings
 from hypothesis import strategies as st
 
 import awkward as ak
 import hypothesis_awkward.strategies as st_ak
-from hypothesis_awkward.util import any_nan_nat_in_awkward_array
+from hypothesis_awkward.util import (
+    any_nan_in_awkward_array,
+    any_nan_nat_in_awkward_array,
+    any_nat_in_awkward_array,
+)
 
 DEFAULT_MAX_SIZE = 10
 
@@ -114,3 +118,82 @@ def test_from_numpy(data: st.DataObject) -> None:
         assert not has_nan
 
     assert size <= max_size
+
+
+def test_draw_structured() -> None:
+    '''Assert that structured arrays can be drawn by default.'''
+    find(
+        st_ak.from_numpy(),
+        lambda a: isinstance(a.layout, ak.contents.RecordArray),
+        settings=settings(phases=[Phase.generate]),
+    )
+
+
+def test_draw_nan() -> None:
+    '''Assert that arrays with NaN can be drawn when allowed.'''
+    floating_dtypes = st_ak.supported_dtypes().filter(lambda d: d.kind == 'f')
+    find(
+        st_ak.from_numpy(dtype=floating_dtypes, allow_nan=True),
+        any_nan_in_awkward_array,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
+
+
+def test_draw_nat_datetime64() -> None:
+    '''Assert that datetime64 arrays with NaT can be drawn when allowed.'''
+    datetime64_dtypes = st_ak.supported_dtypes().filter(
+        lambda d: d.kind == 'M'
+    )
+    find(
+        st_ak.from_numpy(dtype=datetime64_dtypes, allow_nan=True),
+        any_nat_in_awkward_array,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
+
+
+def test_draw_nat_timedelta64() -> None:
+    '''Assert that timedelta64 arrays with NaT can be drawn when allowed.'''
+    timedelta64_dtypes = st_ak.supported_dtypes().filter(
+        lambda d: d.kind == 'm'
+    )
+    find(
+        st_ak.from_numpy(dtype=timedelta64_dtypes, allow_nan=True),
+        any_nat_in_awkward_array,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
+
+
+def test_draw_empty() -> None:
+    '''Assert that empty arrays can be drawn by default.'''
+    find(
+        st_ak.from_numpy(),
+        lambda a: len(a) == 0,
+        settings=settings(phases=[Phase.generate]),
+    )
+
+
+def test_draw_max_size() -> None:
+    '''Assert that arrays with max_size elements can be drawn by default.'''
+
+    def _size(a: ak.Array) -> int:
+        ret = 0
+
+        def _visitor(layout):
+            nonlocal ret
+            match layout:
+                case ak.contents.NumpyArray():
+                    ret += layout.data.size
+                case ak.contents.RecordArray():
+                    for c in layout.contents:
+                        _visitor(c)
+                case _:
+                    raise TypeError(f'Unexpected type: {type(layout)}')
+
+        _visitor(a.layout)
+        return ret
+
+    find(
+        st_ak.from_numpy(allow_structured=False),
+        lambda a: _size(a) == DEFAULT_MAX_SIZE,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
