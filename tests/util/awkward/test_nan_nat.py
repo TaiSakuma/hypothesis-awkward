@@ -89,8 +89,11 @@ def _iter_numpy_arrays(
     stack: list[ak.contents.Content] = [layout]
     while stack:
         content = stack.pop()
-        if isinstance(content, ak.contents.NumpyArray):
-            yield content.data
-        elif isinstance(content, ak.contents.RecordArray):
-            for field in content.fields:
-                stack.append(content[field])
+        match content:
+            case ak.contents.NumpyArray():
+                yield content.data
+            case ak.contents.RecordArray():
+                for field in content.fields:
+                    stack.append(content[field])
+            case _:
+                raise TypeError(f'Unexpected content type: {type(content)}')
