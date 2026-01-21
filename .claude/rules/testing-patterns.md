@@ -17,7 +17,9 @@ class NumpyArraysKwargs(TypedDict, total=False):
 
 ## 2. Strategy for kwargs
 
-Create a strategy that generates valid combinations of kwargs:
+### Simple case: all optional, independent kwargs
+
+Use `st.fixed_dictionaries` with `optional`:
 
 ```python
 def numpy_arrays_kwargs() -> st.SearchStrategy[NumpyArraysKwargs]:
@@ -32,6 +34,53 @@ def numpy_arrays_kwargs() -> st.SearchStrategy[NumpyArraysKwargs]:
         },
     ).map(lambda d: cast(NumpyArraysKwargs, d))
 ```
+
+### Complex case: dependent kwargs
+
+See `tests/strategies/misc/test_ranges.py` for a full example.
+
+When kwargs depend on each other, use `@st.composite` and `flatmap`:
+
+```python
+@st.composite
+def ranges_kwargs(
+    draw: st.DrawFn, st_: StMinMaxValuesFactory[T] | None = None
+) -> RangesKwargs[T]:
+    if st_ is None:
+        st_ = st.integers
+
+    # Generate dependent values using flatmap
+    min_start, max_start = draw(min_max_starts(st_=st_))
+    min_end, max_end = draw(min_max_ends(st_=st_, min_start=min_start))
+
+    # Collect non-None values as required kwargs
+    drawn = (
+        ('min_start', min_start),
+        ('max_start', max_start),
+        ('min_end', min_end),
+        ('max_end', max_end),
+    )
+
+    # Mix required (non-None drawn values) and optional kwargs
+    kwargs = draw(
+        st.fixed_dictionaries(
+            {k: st.just(v) for k, v in drawn if v is not None},
+            optional={
+                'allow_start_none': st.booleans(),
+                'allow_end_none': st.booleans(),
+                'let_end_none_if_start_none': st.booleans(),
+                'allow_equal': st.booleans(),
+            },
+        )
+    )
+
+    return cast(RangesKwargs[T], kwargs)
+```
+
+Key techniques:
+- `@st.composite` allows multiple `draw()` calls with dependencies
+- `flatmap` chains dependent strategies (e.g., max depends on min)
+- Mix required and optional in `st.fixed_dictionaries`
 
 ## 3. Main property-based test
 
