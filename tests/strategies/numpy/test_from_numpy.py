@@ -16,25 +16,6 @@ from hypothesis_awkward.util import (
 DEFAULT_MAX_SIZE = 10
 
 
-def _leaf_dtypes(a: ak.Array) -> set[np.dtype]:
-    '''Dtypes of leaf NumPy arrays contained in `a`.'''
-    return {arr.dtype for arr in iter_numpy_arrays(a)}
-
-
-def _is_structured(a: ak.Array) -> bool:
-    '''Check if `a` is a structured array.'''
-    layout = a.layout
-    if isinstance(layout, ak.contents.NumpyArray):  # simple array
-        return False
-    assert isinstance(layout, ak.contents.RecordArray)  # structured array
-    return True
-
-
-def _size(a: ak.Array) -> int:
-    '''Total size of all leaf NumPy arrays contained in `a`.'''
-    return sum(arr.size for arr in iter_numpy_arrays(a))
-
-
 class FromNumpyKwargs(TypedDict, total=False):
     '''Options for `from_numpy()` strategy.'''
 
@@ -158,3 +139,22 @@ def test_draw_max_size() -> None:
         lambda a: _size(a) == DEFAULT_MAX_SIZE,
         settings=settings(phases=[Phase.generate], max_examples=2000),
     )
+
+
+def _leaf_dtypes(a: ak.Array) -> set[np.dtype]:
+    '''Dtypes of leaf NumPy arrays contained in `a`.'''
+    return {arr.dtype for arr in iter_numpy_arrays(a)}
+
+
+def _is_structured(a: ak.Array) -> bool:
+    '''Check if `a` is a structured array.'''
+    layout = a.layout
+    if isinstance(layout, ak.contents.NumpyArray):  # simple array
+        return False
+    assert isinstance(layout, ak.contents.RecordArray)  # structured array
+    return True
+
+
+def _size(a: ak.Array) -> int:
+    '''Total size of all leaf NumPy arrays contained in `a`.'''
+    return sum(arr.size for arr in iter_numpy_arrays(a))
