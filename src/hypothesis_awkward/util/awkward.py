@@ -7,6 +7,34 @@ def any_nan_nat_in_awkward_array(
     a: ak.Array | ak.contents.Content,
     /,
 ) -> bool:
+    '''`True` if Awkward Array contains any `NaN` or `NaT` values, else `False`.
+
+    Parameters
+    ----------
+    a
+        An Awkward Array.
+
+    Returns
+    -------
+    bool
+        `True` if `a` contains any `NaN` or `NaT` values, else `False`.
+
+    Examples
+    --------
+
+    >>> a = ak.Array([1.0, 2.0, np.nan])
+    >>> any_nan_nat_in_awkward_array(a)
+    True
+
+    >>> a = ak.Array([1.0, 2.0, 3.0])
+    >>> any_nan_nat_in_awkward_array(a)
+    False
+
+    >>> a = ak.Array([{'x': 1.0, 'y': np.nan}, {'x': 2.0, 'y': 3.0}])
+    >>> any_nan_nat_in_awkward_array(a)
+    True
+
+    '''
     stack: list[ak.Array | ak.contents.Content] = [a]
     while stack:
         item = stack.pop()
