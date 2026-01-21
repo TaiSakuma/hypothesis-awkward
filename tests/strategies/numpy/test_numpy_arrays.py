@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 from hypothesis import Phase, find, given, note, settings
 from hypothesis import strategies as st
+from hypothesis.extra import numpy as st_np
 
 import awkward as ak
 import hypothesis_awkward.strategies as st_ak
@@ -136,16 +137,25 @@ def test_draw_structured() -> None:
 def test_draw_nan() -> None:
     '''Assert that arrays with NaN can be drawn when allowed.'''
     find(
-        st_ak.numpy_arrays(allow_nan=True),
+        st_ak.numpy_arrays(dtype=st_np.floating_dtypes(), allow_nan=True),
         lambda a: any_nan_in_numpy_array(a),
         settings=settings(phases=[Phase.generate], max_examples=2000),
     )
 
 
-def test_draw_nat() -> None:
-    '''Assert that arrays with NaT can be drawn when allowed.'''
+def test_draw_nat_datetime64() -> None:
+    '''Assert that datetime64 arrays with NaT can be drawn when allowed.'''
     find(
-        st_ak.numpy_arrays(allow_nan=True),
+        st_ak.numpy_arrays(dtype=st_np.datetime64_dtypes(), allow_nan=True),
+        lambda a: any_nat_in_numpy_array(a),
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
+
+
+def test_draw_nat_timedelta64() -> None:
+    '''Assert that timedelta64 arrays with NaT can be drawn when allowed.'''
+    find(
+        st_ak.numpy_arrays(dtype=st_np.timedelta64_dtypes(), allow_nan=True),
         lambda a: any_nat_in_numpy_array(a),
         settings=settings(phases=[Phase.generate], max_examples=2000),
     )
@@ -156,7 +166,7 @@ def test_draw_empty() -> None:
     find(
         st_ak.numpy_arrays(),
         lambda a: math.prod(a.shape) == 0,
-        settings=settings(phases=[Phase.generate], max_examples=2000),
+        settings=settings(phases=[Phase.generate]),
     )
 
 
