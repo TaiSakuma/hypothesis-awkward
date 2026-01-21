@@ -15,6 +15,52 @@ from hypothesis_awkward.util import (
 DEFAULT_MAX_SIZE = 10
 
 
+def _leaf_dtypes(a: ak.Array) -> set[np.dtype]:
+    '''Dtypes of leaf NumPy arrays contained in `a`.'''
+    dtypes: set[np.dtype] = set()
+
+    def _visitor(layout):
+        match layout:
+            case ak.contents.NumpyArray():
+                dtypes.add(layout.data.dtype)
+            case ak.contents.RecordArray():
+                for c in layout.contents:
+                    _visitor(c)
+            case _:
+                raise TypeError(f'Unexpected type: {type(layout)}')
+
+    _visitor(a.layout)
+    return dtypes
+
+
+def _is_structured(a: ak.Array) -> bool:
+    '''Check if `a` is a structured array.'''
+    layout = a.layout
+    if isinstance(layout, ak.contents.NumpyArray):  # simple array
+        return False
+    assert isinstance(layout, ak.contents.RecordArray)  # structured array
+    return True
+
+
+def _size(a: ak.Array) -> int:
+    '''Total size of all leaf NumPy arrays contained in `a`.'''
+    ret = 0
+
+    def _visitor(layout):
+        nonlocal ret
+        match layout:
+            case ak.contents.NumpyArray():
+                ret += layout.data.size
+            case ak.contents.RecordArray():
+                for c in layout.contents:
+                    _visitor(c)
+            case _:
+                raise TypeError(f'Unexpected type: {type(layout)}')
+
+    _visitor(a.layout)
+    return ret
+
+
 class FromNumpyKwargs(TypedDict, total=False):
     '''Options for `from_numpy()` strategy.'''
 
@@ -56,47 +102,6 @@ def test_from_numpy(data: st.DataObject) -> None:
     allow_structured = kwargs.get('allow_structured', True)
     allow_nan = kwargs.get('allow_nan', False)
     max_size = kwargs.get('max_size', DEFAULT_MAX_SIZE)
-
-    def _leaf_dtypes(a: ak.Array) -> set[np.dtype]:
-        '''Dtypes of leaf NumPy arrays contained in `a`.'''
-        dtypes = set()
-
-        def _visitor(layout):
-            match layout:
-                case ak.contents.NumpyArray():
-                    dtypes.add(layout.data.dtype)
-                case ak.contents.RecordArray():
-                    for c in layout.contents:
-                        _visitor(c)
-                case _:
-                    raise TypeError(f'Unexpected type: {type(layout)}')
-
-        _visitor(a.layout)
-        return dtypes
-
-    def _is_structured(a: ak.Array) -> bool:
-        layout = a.layout
-        if isinstance(layout, ak.contents.NumpyArray):  # simple array
-            return False
-        assert isinstance(layout, ak.contents.RecordArray)  # structured array
-        return True
-
-    def _size(a: ak.Array) -> int:
-        ret = 0
-
-        def _visitor(layout):
-            nonlocal ret
-            match layout:
-                case ak.contents.NumpyArray():
-                    ret += layout.data.size
-                case ak.contents.RecordArray():
-                    for c in layout.contents:
-                        _visitor(c)
-                case _:
-                    raise TypeError(f'Unexpected type: {type(layout)}')
-
-        _visitor(a.layout)
-        return ret
 
     dtypes = _leaf_dtypes(a)
     structured = _is_structured(a)
@@ -174,24 +179,6 @@ def test_draw_empty() -> None:
 
 def test_draw_max_size() -> None:
     '''Assert that arrays with max_size elements can be drawn by default.'''
-
-    def _size(a: ak.Array) -> int:
-        ret = 0
-
-        def _visitor(layout):
-            nonlocal ret
-            match layout:
-                case ak.contents.NumpyArray():
-                    ret += layout.data.size
-                case ak.contents.RecordArray():
-                    for c in layout.contents:
-                        _visitor(c)
-                case _:
-                    raise TypeError(f'Unexpected type: {type(layout)}')
-
-        _visitor(a.layout)
-        return ret
-
     find(
         st_ak.from_numpy(allow_structured=False),
         lambda a: _size(a) == DEFAULT_MAX_SIZE,
