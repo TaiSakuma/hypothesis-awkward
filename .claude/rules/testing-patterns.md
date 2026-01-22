@@ -78,6 +78,7 @@ def ranges_kwargs(
 ```
 
 Key techniques:
+
 - `@st.composite` allows multiple `draw()` calls with dependencies
 - `flatmap` chains dependent strategies (e.g., max depends on min)
 - Mix required and optional in `st.fixed_dictionaries`
