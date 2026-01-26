@@ -1,6 +1,6 @@
 # Pinned latest versions of dependencies.
 # Used in GitHub Actions for testing compatibility.
 # Monitored by Dependabot.
-awkward==2.8.11
+awkward==2.8.12
 pandas==2.3.3
 pyarrow==23.0.0
