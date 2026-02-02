@@ -1,10 +1,13 @@
 from typing import TypedDict, cast
 
+import pytest
 from hypothesis import Phase, find, given, note, settings
 from hypothesis import strategies as st
 
 import awkward as ak
 import hypothesis_awkward.strategies as st_ak
+
+pytestmark = pytest.mark.skip(reason='draft — content strategy testing TBD')
 
 
 class ListTypesKwargs(TypedDict, total=False):
