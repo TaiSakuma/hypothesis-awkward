@@ -1,4 +1,4 @@
-from typing import TypedDict, cast
+from typing import Any, TypedDict, TypeVar, cast
 
 import numpy as np
 from hypothesis import Phase, find, given, note, settings
@@ -6,6 +6,33 @@ from hypothesis import strategies as st
 
 import awkward as ak
 import hypothesis_awkward.strategies as st_ak
+
+T = TypeVar('T')
+
+
+class RecordDraws(st.SearchStrategy[T]):
+    '''Wrap a strategy to store a set of all drawn values.'''
+
+    def __init__(self, base: st.SearchStrategy[T]) -> None:
+        super().__init__()
+        self.drawn = set[T]()
+        self._base = base
+
+    def do_draw(self, data: Any) -> T:
+        value = data.draw(self._base)
+        self.drawn.add(value)
+        return value
+
+
+@given(data=st.data())
+def test_record_draws(data: st.DataObject) -> None:
+    '''Test that RecordDraws records drawn values.'''
+    recorder = RecordDraws(st_ak.supported_dtypes())
+    n = data.draw(st.integers(min_value=0, max_value=10), label='n')
+    expected = set()
+    for i in range(n):
+        expected.add(data.draw(recorder, label=f'{i}'))
+    assert recorder.drawn == expected
 
 
 class NumpyTypesKwargs(TypedDict, total=False):
