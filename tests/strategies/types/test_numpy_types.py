@@ -1,7 +1,7 @@
 from typing import Any, TypedDict, TypeVar, cast
 
 import numpy as np
-from hypothesis import Phase, find, given, note, settings
+from hypothesis import Phase, find, given, settings
 from hypothesis import strategies as st
 
 import awkward as ak
@@ -49,7 +49,7 @@ def numpy_types_kwargs() -> st.SearchStrategy[NumpyTypesKwargs]:
         optional={
             'dtypes': st.one_of(
                 st.none(),
-                st.just(st_ak.supported_dtypes()),
+                st.just(RecordDraws(st_ak.supported_dtypes())),
             ),
             'allow_datetime': st.booleans(),
         },
@@ -73,15 +73,15 @@ def test_numpy_types(data: st.DataObject) -> None:
     dtypes = kwargs.get('dtypes', None)
     allow_datetime = kwargs.get('allow_datetime', True)
 
-    note(f'{result=}')
-    note(f'{result.primitive=}')
-
-    # If dtypes is None and allow_datetime is False, datetime types should not appear
-    if dtypes is None and not allow_datetime:
-        assert result.primitive not in ('datetime64', 'timedelta64')
-        # Also check that it's not a datetime with units
-        assert not result.primitive.startswith('datetime64')
-        assert not result.primitive.startswith('timedelta64')
+    match dtypes:
+        case None:
+            assert result.primitive in st_ak.numpy.dtype.SUPPORTED_DTYPE_NAMES
+            if not allow_datetime:
+                assert not result.primitive.startswith('datetime64')
+                assert not result.primitive.startswith('timedelta64')
+        case RecordDraws():
+            drawn_dtypes = {d.name for d in dtypes.drawn}
+            assert result.primitive in drawn_dtypes
 
 
 def test_draw_integer_type() -> None:
