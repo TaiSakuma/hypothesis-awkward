@@ -1,5 +1,5 @@
 import math
-from typing import Any, TypedDict, TypeVar, cast
+from typing import TypedDict, cast
 
 import numpy as np
 import pytest
@@ -15,23 +15,6 @@ from hypothesis_awkward.util import (
     any_nat_in_numpy_array,
     simple_dtype_kinds_in,
 )
-
-T = TypeVar('T')
-
-
-class RecordDraws(st.SearchStrategy[T]):
-    '''Wrap a strategy to store all drawn values.'''
-
-    def __init__(self, base: st.SearchStrategy[T]) -> None:
-        super().__init__()
-        self.drawn: list[T] = []
-        self._base = base
-
-    def do_draw(self, data: Any) -> T:
-        value = data.draw(self._base)
-        self.drawn.append(value)
-        return value
-
 
 DEFAULT_MAX_SIZE = 10
 
@@ -58,7 +41,7 @@ class NumpyArraysOpts:
 
     def reset(self) -> None:
         for v in self._kwargs.values():
-            if isinstance(v, RecordDraws):
+            if isinstance(v, st_ak.RecordDraws):
                 v.drawn.clear()
 
 
@@ -70,7 +53,7 @@ def numpy_arrays_kwargs() -> st.SearchStrategy[NumpyArraysOpts]:
             optional={
                 'dtype': st.one_of(
                     st.none(),
-                    st.just(RecordDraws(st_ak.supported_dtypes())),
+                    st.just(st_ak.RecordDraws(st_ak.supported_dtypes())),
                     st_ak.supported_dtypes(),
                 ),
                 'allow_structured': st.booleans(),
@@ -106,7 +89,7 @@ def test_numpy_arrays(data: st.DataObject) -> None:
             kinds = simple_dtype_kinds_in(n.dtype)
             assert len(kinds) == 1
             assert dtype.kind in kinds
-        case RecordDraws():
+        case st_ak.RecordDraws():
             drawn_kinds = {d.kind for d in dtype.drawn}
             result_kinds = simple_dtype_kinds_in(n.dtype)
             assert result_kinds <= drawn_kinds

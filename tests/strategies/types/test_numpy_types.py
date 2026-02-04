@@ -1,4 +1,4 @@
-from typing import Any, TypedDict, TypeVar, cast
+from typing import TypedDict, cast
 
 import numpy as np
 from hypothesis import Phase, find, given, settings
@@ -7,27 +7,11 @@ from hypothesis import strategies as st
 import awkward as ak
 import hypothesis_awkward.strategies as st_ak
 
-T = TypeVar('T')
-
-
-class RecordDraws(st.SearchStrategy[T]):
-    '''Wrap a strategy to store all drawn values.'''
-
-    def __init__(self, base: st.SearchStrategy[T]) -> None:
-        super().__init__()
-        self.drawn: list[T] = []
-        self._base = base
-
-    def do_draw(self, data: Any) -> T:
-        value = data.draw(self._base)
-        self.drawn.append(value)
-        return value
-
 
 @given(data=st.data())
 def test_record_draws(data: st.DataObject) -> None:
-    '''Test that RecordDraws records drawn values.'''
-    recorder = RecordDraws(st_ak.supported_dtypes())
+    '''Test that st_ak.RecordDraws records drawn values.'''
+    recorder = st_ak.RecordDraws(st_ak.supported_dtypes())
     n = data.draw(st.integers(min_value=0, max_value=10), label='n')
     expected = []
     for i in range(n):
@@ -49,7 +33,7 @@ def numpy_types_kwargs() -> st.SearchStrategy[NumpyTypesKwargs]:
         optional={
             'dtypes': st.one_of(
                 st.none(),
-                st.just(RecordDraws(st_ak.supported_dtypes())),
+                st.just(st_ak.RecordDraws(st_ak.supported_dtypes())),
             ),
             'allow_datetime': st.booleans(),
         },
@@ -79,7 +63,7 @@ def test_numpy_types(data: st.DataObject) -> None:
             if not allow_datetime:
                 assert not result.primitive.startswith('datetime64')
                 assert not result.primitive.startswith('timedelta64')
-        case RecordDraws():
+        case st_ak.RecordDraws():
             drawn_dtypes = {d.name for d in dtypes.drawn}
             assert result.primitive in drawn_dtypes
 

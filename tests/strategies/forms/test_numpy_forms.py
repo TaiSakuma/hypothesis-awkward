@@ -1,4 +1,4 @@
-from typing import Any, TypedDict, TypeVar, cast
+from typing import TypedDict, cast
 
 import numpy as np
 from hypothesis import Phase, find, given, note, settings
@@ -7,22 +7,6 @@ from hypothesis import strategies as st
 import awkward as ak
 import hypothesis_awkward.strategies as st_ak
 from hypothesis_awkward.strategies.numpy.dtype import SUPPORTED_DTYPE_NAMES
-
-T = TypeVar('T')
-
-
-class RecordDraws(st.SearchStrategy[T]):
-    '''Wrap a strategy to store all drawn values.'''
-
-    def __init__(self, base: st.SearchStrategy[T]) -> None:
-        super().__init__()
-        self.drawn: list[T] = []
-        self._base = base
-
-    def do_draw(self, data: Any) -> T:
-        value = data.draw(self._base)
-        self.drawn.append(value)
-        return value
 
 
 class NumpyFormsKwargs(TypedDict, total=False):
@@ -47,7 +31,7 @@ class NumpyFormsOpts:
 
     def reset(self) -> None:
         for v in self._kwargs.values():
-            if isinstance(v, RecordDraws):
+            if isinstance(v, st_ak.RecordDraws):
                 v.drawn.clear()
 
 
@@ -73,7 +57,7 @@ def numpy_forms_kwargs() -> st.SearchStrategy[NumpyFormsOpts]:
             {
                 'type_': st.one_of(
                     st_ak.numpy_types(),
-                    st.just(RecordDraws(st_ak.numpy_types())),
+                    st.just(st_ak.RecordDraws(st_ak.numpy_types())),
                 ),
             },
         ).map(lambda d: cast(NumpyFormsKwargs, d))
@@ -84,7 +68,7 @@ def numpy_forms_kwargs() -> st.SearchStrategy[NumpyFormsOpts]:
             optional={
                 'dtypes': st.one_of(
                     st.none(),
-                    st.just(RecordDraws(st_ak.supported_dtypes())),
+                    st.just(st_ak.RecordDraws(st_ak.supported_dtypes())),
                 ),
                 'allow_datetime': st.booleans(),
                 'inner_shape': st.one_of(
@@ -94,7 +78,7 @@ def numpy_forms_kwargs() -> st.SearchStrategy[NumpyFormsOpts]:
                         min_size=0,
                         max_size=3,
                     ).map(tuple),
-                    st.just(RecordDraws(_inner_shape_strategies())),
+                    st.just(st_ak.RecordDraws(_inner_shape_strategies())),
                 ),
                 'allow_inner_shape': st.booleans(),
             },
@@ -141,7 +125,7 @@ def test_numpy_forms(data: st.DataObject) -> None:
         match type_:
             case ak.types.NumpyType():
                 assert result.primitive == type_.primitive
-            case RecordDraws():
+            case st_ak.RecordDraws():
                 drawn_primitives = {t.primitive for t in type_.drawn}
                 assert result.primitive in drawn_primitives
         assert result.inner_shape == ()
@@ -152,7 +136,7 @@ def test_numpy_forms(data: st.DataObject) -> None:
                 assert result.primitive in SUPPORTED_DTYPE_NAMES
                 if not allow_datetime:
                     assert result.primitive not in DATETIME_PRIMITIVES
-            case RecordDraws():
+            case st_ak.RecordDraws():
                 drawn_dtype_names = {d.name for d in dtypes.drawn}
                 assert result.primitive in drawn_dtype_names
 
@@ -160,7 +144,7 @@ def test_numpy_forms(data: st.DataObject) -> None:
             case None:
                 if not allow_inner_shape:
                     assert result.inner_shape == ()
-            case RecordDraws():
+            case st_ak.RecordDraws():
                 drawn_shapes = set(inner_shape.drawn)
                 assert result.inner_shape in drawn_shapes
             case tuple():
