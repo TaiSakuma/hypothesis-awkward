@@ -208,7 +208,7 @@ can filter via the `dtypes` parameter:
 
 ```python
 non_datetime = st_ak.supported_dtypes().filter(lambda d: d.kind not in ('M', 'm'))
-st_ak.arrays(dtypes=non_datetime)
+st_ak.constructors.arrays(dtypes=non_datetime)
 ```
 
 This keeps the `arrays()` parameter list focused on structural concerns. The
@@ -347,7 +347,7 @@ arrays. The `arrays()` strategy exercises the direct constructor path.
 
 ```text
 src/hypothesis_awkward/strategies/
-+-- arrays/
++-- constructors/
 |   +-- __init__.py           # Re-exports arrays()
 |   +-- arrays.py             # Main arrays() strategy
 |   +-- numpy_.py             # _numpy_array_contents() internal helper
@@ -360,10 +360,10 @@ src/hypothesis_awkward/strategies/
 +-- __init__.py               # Add arrays to public API
 ```
 
-As more node types are added, the `arrays/` directory grows:
+As more node types are added, the `constructors/` directory grows:
 
 ```text
-src/hypothesis_awkward/strategies/arrays/
+src/hypothesis_awkward/strategies/constructors/
 +-- __init__.py
 +-- arrays.py                 # Main arrays() strategy
 +-- numpy_.py                 # _numpy_array_contents()
@@ -376,24 +376,17 @@ src/hypothesis_awkward/strategies/arrays/
 
 ### Public API
 
-Exported from `strategies/__init__.py`:
-
-```python
-__all__ = [
-    ...,
-    'arrays',
-]
-
-from .arrays import arrays
-```
-
-Usage:
+The `constructors` subpackage is available as a namespace under `strategies/`:
 
 ```python
 import hypothesis_awkward.strategies as st_ak
 
-st_ak.arrays()
+st_ak.constructors.arrays()
 ```
+
+Not re-exported at the `st_ak` top level. This keeps `constructors` as a
+distinct namespace, leaving room for alternative approaches (e.g.,
+`st_ak.builders.arrays()`) without name collisions.
 
 ## Design Decisions
 
@@ -473,13 +466,16 @@ from `allow_record=True`.
 `st.just()`, as `numpy_arrays(dtype=...)` does. Deferred to keep the initial
 interface strict and revisit based on user feedback.
 
-### 6. Separate `arrays/` Directory
+### 6. Separate `constructors/` Directory
 
-**Decision:** Place `arrays()` in `strategies/arrays/`, not in `strategies/`
-root or `strategies/numpy/`.
+**Decision:** Place `arrays()` in `strategies/constructors/`, not in
+`strategies/` root or `strategies/numpy/`.
 
 **Rationale:**
 
+- The directory name reflects the approach (direct constructors), not the output.
+  This leaves room for alternative approaches later (e.g., `builders/`,
+  `from_types/`).
 - `arrays()` is the main entry point, not specific to NumPy.
 - It will grow to contain multiple internal modules (one per node type).
 - Follows the pattern of `types/`, `forms/`, etc.
@@ -510,7 +506,7 @@ it makes the API surface unstable across versions.
 import hypothesis_awkward.strategies as st_ak
 from hypothesis import given
 
-@given(a=st_ak.arrays())
+@given(a=st_ak.constructors.arrays())
 def test_something(a):
     # a is a flat ak.Array backed by NumpyArray
     assert isinstance(a, ak.Array)
@@ -523,7 +519,7 @@ def test_something(a):
 import numpy as np
 from hypothesis import strategies as st
 
-@given(a=st_ak.arrays(dtypes=st.just(np.dtype('float64'))))
+@given(a=st_ak.constructors.arrays(dtypes=st.just(np.dtype('float64'))))
 def test_float_arrays(a):
     assert a.layout.dtype == np.dtype('float64')
 ```
@@ -533,7 +529,7 @@ def test_float_arrays(a):
 ```python
 int_dtypes = st_ak.supported_dtypes().filter(lambda d: d.kind == 'i')
 
-@given(a=st_ak.arrays(dtypes=int_dtypes))
+@given(a=st_ak.constructors.arrays(dtypes=int_dtypes))
 def test_integer_arrays(a):
     assert a.layout.dtype.kind == 'i'
 ```
@@ -543,7 +539,7 @@ def test_integer_arrays(a):
 ```python
 float_dtypes = st_ak.supported_dtypes().filter(lambda d: d.kind == 'f')
 
-@given(a=st_ak.arrays(dtypes=float_dtypes, allow_nan=True))
+@given(a=st_ak.constructors.arrays(dtypes=float_dtypes, allow_nan=True))
 def test_nan_handling(a):
     # Test code that must handle NaN correctly
     ...
@@ -552,7 +548,7 @@ def test_nan_handling(a):
 ### Control Length
 
 ```python
-@given(a=st_ak.arrays(max_length=100))
+@given(a=st_ak.constructors.arrays(max_length=100))
 def test_larger_arrays(a):
     assert len(a) <= 100
 ```
@@ -561,7 +557,7 @@ def test_larger_arrays(a):
 
 ```python
 # Once allow_list and allow_record are implemented:
-@given(a=st_ak.arrays(allow_list=True, allow_record=True, max_depth=2))
+@given(a=st_ak.constructors.arrays(allow_list=True, allow_record=True, max_depth=2))
 def test_nested_arrays(a):
     # a could be flat, a list of lists, a record, etc.
     assert isinstance(a, ak.Array)
@@ -571,7 +567,7 @@ def test_nested_arrays(a):
 
 ```python
 # Future: generate arrays matching a specific type
-@given(a=st_ak.arrays(type=ak.types.ListType(ak.types.NumpyType('float64'))))
+@given(a=st_ak.constructors.arrays(type=ak.types.ListType(ak.types.NumpyType('float64'))))
 def test_typed_arrays(a):
     assert a.type.content == ak.types.NumpyType('float64')
 ```
@@ -616,7 +612,7 @@ def arrays_kwargs() -> st.SearchStrategy[ArraysKwargs]:
 @given(data=st.data())
 def test_arrays(data: st.DataObject) -> None:
     kwargs = data.draw(arrays_kwargs(), label='kwargs')
-    a = data.draw(st_ak.arrays(**kwargs), label='a')
+    a = data.draw(st_ak.constructors.arrays(**kwargs), label='a')
 
     assert isinstance(a, ak.Array)
     assert isinstance(a.layout, ak.contents.NumpyArray)
@@ -637,7 +633,7 @@ def test_arrays(data: st.DataObject) -> None:
 def test_draw_empty() -> None:
     '''Assert that empty arrays can be drawn by default.'''
     find(
-        st_ak.arrays(),
+        st_ak.constructors.arrays(),
         lambda a: len(a) == 0,
         settings=settings(phases=[Phase.generate]),
     )
@@ -646,7 +642,7 @@ def test_draw_empty() -> None:
 def test_draw_max_length() -> None:
     '''Assert that arrays with max_length elements can be drawn.'''
     find(
-        st_ak.arrays(),
+        st_ak.constructors.arrays(),
         lambda a: len(a) == 5,
         settings=settings(phases=[Phase.generate]),
     )
@@ -656,7 +652,7 @@ def test_draw_nan() -> None:
     '''Assert that arrays with NaN can be drawn when allowed.'''
     float_dtypes = st_ak.supported_dtypes().filter(lambda d: d.kind == 'f')
     find(
-        st_ak.arrays(dtypes=float_dtypes, allow_nan=True),
+        st_ak.constructors.arrays(dtypes=float_dtypes, allow_nan=True),
         any_nan_in_awkward_array,
         settings=settings(phases=[Phase.generate], max_examples=2000),
     )
@@ -666,7 +662,7 @@ def test_draw_integer_dtype() -> None:
     '''Assert that integer dtype arrays can be drawn.'''
     int_dtypes = st_ak.supported_dtypes().filter(lambda d: d.kind == 'i')
     find(
-        st_ak.arrays(dtypes=int_dtypes),
+        st_ak.constructors.arrays(dtypes=int_dtypes),
         lambda a: a.layout.dtype.kind == 'i',
         settings=settings(phases=[Phase.generate]),
     )
@@ -675,7 +671,7 @@ def test_draw_integer_dtype() -> None:
 ### 5. File structure for tests
 
 ```text
-tests/strategies/arrays/
+tests/strategies/constructors/
 +-- __init__.py
 +-- test_arrays.py
 ```
