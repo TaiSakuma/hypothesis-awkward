@@ -25,38 +25,43 @@ class FromNumpyKwargs(TypedDict, total=False):
     max_size: int
 
 
-def from_numpy_kwargs() -> st.SearchStrategy[FromNumpyKwargs]:
+def from_numpy_kwargs() -> st.SearchStrategy[st_ak.Opts[FromNumpyKwargs]]:
     '''Strategy for options for `from_numpy()` strategy.'''
-    return st.fixed_dictionaries(
-        {},
-        optional={
-            'dtype': st.one_of(
-                st.none(),
-                st.just(st_ak.supported_dtypes()),
-                st_ak.supported_dtypes(),
-            ),
-            'allow_structured': st.booleans(),
-            'allow_nan': st.booleans(),
-            'max_size': st.integers(min_value=0, max_value=100),
-        },
-    ).map(lambda d: cast(FromNumpyKwargs, d))
+    return (
+        st.fixed_dictionaries(
+            {},
+            optional={
+                'dtype': st.one_of(
+                    st.none(),
+                    st.just(st_ak.RecordDraws(st_ak.supported_dtypes())),
+                    st_ak.supported_dtypes(),
+                ),
+                'allow_structured': st.booleans(),
+                'allow_nan': st.booleans(),
+                'max_size': st.integers(min_value=0, max_value=100),
+            },
+        )
+        .map(lambda d: cast(FromNumpyKwargs, d))
+        .map(st_ak.Opts)
+    )
 
 
 @settings(max_examples=200)
 @given(data=st.data())
 def test_from_numpy(data: st.DataObject) -> None:
     # Draw options
-    kwargs = data.draw(from_numpy_kwargs(), label='kwargs')
+    opts = data.draw(from_numpy_kwargs(), label='opts')
+    opts.reset()
 
     # Call the test subject
-    a = data.draw(st_ak.from_numpy(**kwargs), label='a')
+    a = data.draw(st_ak.from_numpy(**opts.kwargs), label='a')
     assert isinstance(a, ak.Array)
 
     # Assert the options were effective
-    dtype = kwargs.get('dtype', None)
-    allow_structured = kwargs.get('allow_structured', True)
-    allow_nan = kwargs.get('allow_nan', False)
-    max_size = kwargs.get('max_size', DEFAULT_MAX_SIZE)
+    dtype = opts.kwargs.get('dtype', None)
+    allow_structured = opts.kwargs.get('allow_structured', True)
+    allow_nan = opts.kwargs.get('allow_nan', False)
+    max_size = opts.kwargs.get('max_size', DEFAULT_MAX_SIZE)
 
     dtypes = _leaf_dtypes(a)
     structured = _is_structured(a)
@@ -67,9 +72,15 @@ def test_from_numpy(data: st.DataObject) -> None:
     note(f'{has_nan=}')
     note(f'{size=}')
 
-    if dtype is not None and not isinstance(dtype, st.SearchStrategy):
-        assert len(dtypes) == 1
-        assert dtype in dtypes
+    match dtype:
+        case None:
+            pass
+        case np.dtype():
+            assert len(dtypes) == 1
+            assert dtype in dtypes
+        case st_ak.RecordDraws():
+            drawn_dtypes = {d for d in dtype.drawn}
+            assert dtypes <= drawn_dtypes
 
     if not allow_structured:
         assert not structured
