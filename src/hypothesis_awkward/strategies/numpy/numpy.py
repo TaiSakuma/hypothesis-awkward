@@ -19,7 +19,7 @@ def numpy_arrays(
     dtype: np.dtype | st.SearchStrategy[np.dtype] | None = None,
     allow_structured: bool = True,
     allow_nan: bool = False,
-    allow_inner_shape: bool = True,
+    max_dims: int | None = None,
     max_size: int = 10,
 ) -> np.ndarray:
     '''Strategy for NumPy arrays from which Awkward Arrays can be created.
@@ -33,9 +33,8 @@ def numpy_arrays(
         Generate only simple arrays if `False`, else structured arrays as well.
     allow_nan
         Generate potentially `NaN` for relevant dtypes if `True`.
-    allow_inner_shape
-        Generate only 1-D arrays if `False`, else multi-dimensional arrays as
-        well.
+    max_dims
+        Maximum number of dimensions. If `None`, auto-derived from `max_size`.
     max_size
         Maximum number of items in the array.
 
@@ -66,17 +65,16 @@ def numpy_arrays(
         shape = (0,)
     else:
         max_side = draw(st.integers(min_value=1, max_value=max_size))
-        if allow_inner_shape:
-            if max_side == 1:
-                max_dims = min(NDIM_MAX, max_size)
-            else:
-                max_dims = min(
-                    NDIM_MAX, math.floor(math.log(max_size) / math.log(max_side))
-                )
-            max_dims = draw(st.integers(min_value=1, max_value=max_dims))
+        if max_side == 1:
+            max_dims_upper = min(NDIM_MAX, max_size)
         else:
-            max_dims = 1
-        shape = draw(st_np.array_shapes(max_dims=max_dims, max_side=max_side))
+            max_dims_upper = min(
+                NDIM_MAX, math.floor(math.log(max_size) / math.log(max_side))
+            )
+        if max_dims is not None:
+            max_dims_upper = min(max_dims_upper, max_dims)
+        n_dims = draw(st.integers(min_value=1, max_value=max_dims_upper))
+        shape = draw(st_np.array_shapes(max_dims=n_dims, max_side=max_side))
 
     return draw(
         st_np.arrays(dtype=dtype, shape=shape, elements={'allow_nan': allow_nan})

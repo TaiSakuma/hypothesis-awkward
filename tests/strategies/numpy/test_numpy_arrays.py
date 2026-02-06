@@ -25,7 +25,7 @@ class NumpyArraysKwargs(TypedDict, total=False):
     dtype: np.dtype | st.SearchStrategy[np.dtype] | None
     allow_structured: bool
     allow_nan: bool
-    allow_inner_shape: bool
+    max_dims: int
     max_size: int
 
 
@@ -42,7 +42,7 @@ def numpy_arrays_kwargs() -> st.SearchStrategy[st_ak.Opts[NumpyArraysKwargs]]:
                 ),
                 'allow_structured': st.booleans(),
                 'allow_nan': st.booleans(),
-                'allow_inner_shape': st.booleans(),
+                'max_dims': st.integers(min_value=1, max_value=5),
                 'max_size': st.integers(min_value=0, max_value=100),
             },
         )
@@ -65,7 +65,7 @@ def test_numpy_arrays(data: st.DataObject) -> None:
     dtype = opts.kwargs.get('dtype', None)
     allow_structured = opts.kwargs.get('allow_structured', True)
     allow_nan = opts.kwargs.get('allow_nan', False)
-    allow_inner_shape = opts.kwargs.get('allow_inner_shape', True)
+    max_dims = opts.kwargs.get('max_dims', None)
     max_size = opts.kwargs.get('max_size', DEFAULT_MAX_SIZE)
 
     match dtype:
@@ -90,8 +90,8 @@ def test_numpy_arrays(data: st.DataObject) -> None:
     if not allow_nan:
         assert not has_nan
 
-    if not allow_inner_shape:
-        assert len(n.shape) == 1
+    if max_dims is not None:
+        assert len(n.shape) <= max_dims
 
     # Assert an Awkward Array can be created.
     a = ak.from_numpy(n)
@@ -194,10 +194,10 @@ def test_draw_max_size() -> None:
     )
 
 
-def test_draw_inner_shape() -> None:
-    '''Assert that multi-dimensional arrays can be drawn by default.'''
+def test_draw_max_dims() -> None:
+    '''Assert that arrays with max_dims dimensions can be drawn.'''
     find(
-        st_ak.numpy_arrays(allow_structured=False),
-        lambda a: len(a.shape) > 1,
+        st_ak.numpy_arrays(allow_structured=False, max_dims=3),
+        lambda a: len(a.shape) == 3,
         settings=settings(phases=[Phase.generate], max_examples=2000),
     )

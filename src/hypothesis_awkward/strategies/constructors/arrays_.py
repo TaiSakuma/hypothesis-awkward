@@ -39,7 +39,7 @@ def arrays(
             dtype=dtypes,
             allow_structured=False,
             allow_nan=allow_nan,
-            allow_inner_shape=False,
+            max_dims=1,
             max_size=max_length,
         )
     )
