@@ -40,9 +40,11 @@ def numpy_arrays(
     max_dims
         Maximum number of dimensions. If `None`, auto-derived from `max_size`.
     min_size
-        Minimum number of items in the array.
+        Minimum number of scalars in the array. For structured dtypes, each
+        element counts as multiple scalars (one per field).
     max_size
-        Maximum number of items in the array.
+        Maximum number of scalars in the array. For structured dtypes, each
+        element counts as multiple scalars (one per field).
 
     Examples
     --------
@@ -60,15 +62,16 @@ def numpy_arrays(
         )
     )
     dtype_size = n_scalars_in(dtype)
-    max_size = max_size // dtype_size
-    average_size = max_size // 2
+    min_elems = -(-min_size // dtype_size)  # min number of elements in the shape
+    max_elems = max_size // dtype_size  # max number of elements in the shape
+    average_size = max_elems // 2
 
     # Empty arrays must be generated separately because st_np.array_shapes() requires
     # min_side >= 1 by default. The probability of generating an empty array is set to
     # P(empty) = 1 / (1 + average_size), matching Hypothesis st.lists() behavior. For
     # max_size=10: average_size=5, P(empty) = 1/6 ≈ 16.7%
-    empty = min_size <= 0 and (
-        max_size <= 0 or draw(st.integers(min_value=0, max_value=average_size)) == 0
+    empty = min_elems <= 0 and (
+        max_elems <= 0 or draw(st.integers(min_value=0, max_value=average_size)) == 0
     )
 
     shape: tuple[int, ...]
@@ -76,9 +79,9 @@ def numpy_arrays(
         shape = (0,) + (1,) * (min_dims - 1)
     else:
         min_side_lower = (
-            max(1, math.ceil(min_size ** (1 / min_dims))) if min_size > 0 else 1
+            max(1, math.ceil(min_elems ** (1 / min_dims))) if min_elems > 0 else 1
         )
-        max_side_upper = math.floor(max_size ** (1 / min_dims))
+        max_side_upper = math.floor(max_elems ** (1 / min_dims))
         max_side_upper = max(1, max_side_upper)
 
         if min_side_lower <= max_side_upper:
@@ -86,10 +89,10 @@ def numpy_arrays(
                 st.integers(min_value=min_side_lower, max_value=max_side_upper)
             )
             if max_side == 1:
-                max_dims_upper = min(NDIM_MAX, max_size)
+                max_dims_upper = min(NDIM_MAX, max_elems)
             else:
                 max_dims_upper = min(
-                    NDIM_MAX, math.floor(math.log(max_size) / math.log(max_side))
+                    NDIM_MAX, math.floor(math.log(max_elems) / math.log(max_side))
                 )
             if max_dims is not None:
                 max_dims_upper = min(max_dims_upper, max_dims)
@@ -99,11 +102,11 @@ def numpy_arrays(
                 )
             )
             min_side = (
-                max(1, math.ceil(min_size ** (1 / n_dims)))
-                if min_size > 0
+                max(1, math.ceil(min_elems ** (1 / n_dims)))
+                if min_elems > 0
                 else 1
             )
-            min_dims_shape = n_dims if min_size > 0 else min_dims
+            min_dims_shape = n_dims if min_elems > 0 else min_dims
             shape = draw(
                 st_np.array_shapes(
                     min_dims=min_dims_shape,
@@ -114,7 +117,7 @@ def numpy_arrays(
             )
         else:
             # Edge case: min_size close to max_size with min_dims > 1
-            size = draw(st.integers(min_value=min_size, max_value=max_size))
+            size = draw(st.integers(min_value=min_elems, max_value=max_elems))
             extra_dims = 0
             if max_dims is not None and max_dims > min_dims:
                 extra_dims = draw(st.integers(0, max_dims - min_dims))
@@ -148,7 +151,8 @@ def from_numpy(
         Passed to `ak.from_numpy`. If `None` (default), randomly generates
         `True` or `False`.
     max_size
-        Maximum number of items in the array.
+        Maximum number of scalars in the array. For structured dtypes, each
+        element counts as multiple scalars (one per field).
 
     Examples
     --------

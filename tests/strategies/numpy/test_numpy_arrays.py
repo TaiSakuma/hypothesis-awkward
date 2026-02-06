@@ -13,6 +13,7 @@ from hypothesis_awkward.util import (
     any_nan_in_numpy_array,
     any_nan_nat_in_numpy_array,
     any_nat_in_numpy_array,
+    n_scalars_in,
     simple_dtype_kinds_in,
 )
 
@@ -94,8 +95,8 @@ def test_numpy_arrays(data: st.DataObject) -> None:
             result_kinds = simple_dtype_kinds_in(n.dtype)
             assert result_kinds <= drawn_kinds
 
-    size = math.prod(n.shape)
-    assert min_size <= size <= max_size
+    n_scalars = math.prod(n.shape) * n_scalars_in(n.dtype)
+    assert min_size <= n_scalars <= max_size
 
     structured = n.dtype.names is not None
     has_nan = any_nan_nat_in_numpy_array(n)
@@ -203,7 +204,7 @@ def test_draw_empty() -> None:
 
 
 def test_draw_max_size() -> None:
-    '''Assert that arrays with max_size elements can be drawn by default.'''
+    '''Assert that arrays with exactly max_size scalars can be drawn.'''
     find(
         st_ak.numpy_arrays(allow_structured=False),
         lambda a: math.prod(a.shape) == DEFAULT_MAX_SIZE,
@@ -211,12 +212,38 @@ def test_draw_max_size() -> None:
     )
 
 
-def test_draw_min_size() -> None:
-    '''Assert that arrays with at least min_size elements can be drawn.'''
+def test_draw_max_size_structured() -> None:
+    '''Assert that max_size counts scalars for structured dtypes.'''
     find(
-        st_ak.numpy_arrays(allow_structured=False, min_size=5),
-        lambda a: math.prod(a.shape) >= 5,
+        st_ak.numpy_arrays(),
+        lambda a: (
+            math.prod(a.shape) * n_scalars_in(a.dtype) == DEFAULT_MAX_SIZE
+            and a.dtype.names is not None
+        ),
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
+
+
+def test_draw_min_size() -> None:
+    '''Assert that arrays with exactly min_size scalars can be drawn.'''
+    min_size = 5
+    find(
+        st_ak.numpy_arrays(allow_structured=False, min_size=min_size),
+        lambda a: math.prod(a.shape) == min_size,
         settings=settings(phases=[Phase.generate]),
+    )
+
+
+def test_draw_min_size_structured() -> None:
+    '''Assert that min_size counts scalars for structured dtypes.'''
+    min_size = 5
+    find(
+        st_ak.numpy_arrays(min_size=min_size),
+        lambda a: (
+            math.prod(a.shape) * n_scalars_in(a.dtype) == min_size
+            and a.dtype.names is not None
+        ),
+        settings=settings(phases=[Phase.generate], max_examples=2000),
     )
 
 
