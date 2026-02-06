@@ -67,32 +67,11 @@ def numpy_arrays(
     min_items = -(-min_size // dtype_size)  # n items of dtype, rounded up
     max_items = max_size // dtype_size  # n items of dtype, rounded down
 
-    # Generate empty shape manually as `st_np.array_shapes()` doesn't.
-    empty = draw(_st_empty(min_items, max_items))
-
-    shape: tuple[int, ...]
-    if empty:
-        shape = (0,) + (1,) * (min_dims - 1)
-    else:
-        shape = draw(_st_shape(min_items, max_items, min_dims, max_dims))
+    shape = draw(_st_shape(min_items, max_items, min_dims, max_dims))
 
     return draw(
         st_np.arrays(dtype=dtype, shape=shape, elements={'allow_nan': allow_nan})
     )
-
-
-def _st_empty(min_items: int, max_items: int) -> st.SearchStrategy[bool]:
-    '''Strategy for whether to generate an empty array.
-
-    P(empty) = 1 / (1 + average_size), matching Hypothesis st.lists() behavior.
-    For max_size=10: average_size=5, P(empty) = 1/6 ≈ 16.7%
-    '''
-    if min_items > 0:
-        return st.just(False)
-    if max_items <= 0:
-        return st.just(True)
-    average_size = max_items // 2
-    return st.integers(min_value=0, max_value=average_size).map(lambda x: x == 0)
 
 
 @st.composite
@@ -119,6 +98,11 @@ def _st_shape(
     max_dims
         Maximum number of dimensions. If ``None``, derived from ``max_items``.
     '''
+
+    # Generate empty shape manually as `st_np.array_shapes()` doesn't.
+    empty = draw(_st_empty(min_items, max_items))
+    if empty:
+        return (0,) + (1,) * (min_dims - 1)
 
     # Bounds of the largest integer in the shape (the "max side")
     root = 1 / min_dims
@@ -158,6 +142,20 @@ def _st_shape(
             max_side=max_side,
         )
     )
+
+
+def _st_empty(min_items: int, max_items: int) -> st.SearchStrategy[bool]:
+    '''Strategy for whether to generate an empty array.
+
+    P(empty) = 1 / (1 + average_size), matching Hypothesis st.lists() behavior.
+    For max_size=10: average_size=5, P(empty) = 1/6 ≈ 16.7%
+    '''
+    if min_items > 0:
+        return st.just(False)
+    if max_items <= 0:
+        return st.just(True)
+    average_size = max_items // 2
+    return st.integers(min_value=0, max_value=average_size).map(lambda x: x == 0)
 
 
 def from_numpy(
