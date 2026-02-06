@@ -88,7 +88,7 @@ def test_from_numpy(data: st.DataObject) -> None:
     if not allow_nan:
         assert not has_nan
 
-    if multi_dimensional:
+    if multi_dimensional and regulararray is not None:
         if regulararray:
             assert _has_regular_array(a)
         else:
