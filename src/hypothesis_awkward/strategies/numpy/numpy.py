@@ -74,46 +74,7 @@ def numpy_arrays(
     if empty:
         shape = (0,) + (1,) * (min_dims - 1)
     else:
-        min_side_lower = (
-            max(1, math.ceil(min_items ** (1 / min_dims))) if min_items > 0 else 1
-        )
-        max_side_upper = math.floor(max_items ** (1 / min_dims))
-        max_side_upper = max(1, max_side_upper)
-
-        if min_side_lower <= max_side_upper:
-            max_side = draw(
-                st.integers(min_value=min_side_lower, max_value=max_side_upper)
-            )
-            if max_side == 1:
-                max_dims_upper = min(NDIM_MAX, max_items)
-            else:
-                max_dims_upper = min(
-                    NDIM_MAX, math.floor(math.log(max_items) / math.log(max_side))
-                )
-            if max_dims is not None:
-                max_dims_upper = min(max_dims_upper, max_dims)
-            n_dims = draw(
-                st.integers(min_value=min_dims, max_value=max(min_dims, max_dims_upper))
-            )
-            min_side = (
-                max(1, math.ceil(min_items ** (1 / n_dims))) if min_items > 0 else 1
-            )
-            min_dims_shape = n_dims if min_items > 0 else min_dims
-            shape = draw(
-                st_np.array_shapes(
-                    min_dims=min_dims_shape,
-                    max_dims=n_dims,
-                    min_side=min_side,
-                    max_side=max_side,
-                )
-            )
-        else:
-            # Edge case: min_size close to max_size with min_dims > 1
-            size = draw(st.integers(min_value=min_items, max_value=max_items))
-            extra_dims = 0
-            if max_dims is not None and max_dims > min_dims:
-                extra_dims = draw(st.integers(0, max_dims - min_dims))
-            shape = (size,) + (1,) * (min_dims - 1 + extra_dims)
+        shape = draw(_st_shape(min_items, max_items, min_dims, max_dims))
 
     return draw(
         st_np.arrays(dtype=dtype, shape=shape, elements={'allow_nan': allow_nan})
@@ -132,6 +93,53 @@ def _st_empty(min_items: int, max_items: int) -> st.SearchStrategy[bool]:
         return st.just(True)
     average_size = max_items // 2
     return st.integers(min_value=0, max_value=average_size).map(lambda x: x == 0)
+
+
+@st.composite
+def _st_shape(
+    draw: st.DrawFn,
+    min_items: int,
+    max_items: int,
+    min_dims: int,
+    max_dims: int | None,
+) -> tuple[int, ...]:
+    '''Strategy for a non-empty array shape.'''
+    min_side_lower = (
+        max(1, math.ceil(min_items ** (1 / min_dims))) if min_items > 0 else 1
+    )
+    max_side_upper = math.floor(max_items ** (1 / min_dims))
+    max_side_upper = max(1, max_side_upper)
+
+    if min_side_lower <= max_side_upper:
+        max_side = draw(st.integers(min_value=min_side_lower, max_value=max_side_upper))
+        if max_side == 1:
+            max_dims_upper = min(NDIM_MAX, max_items)
+        else:
+            max_dims_upper = min(
+                NDIM_MAX, math.floor(math.log(max_items) / math.log(max_side))
+            )
+        if max_dims is not None:
+            max_dims_upper = min(max_dims_upper, max_dims)
+        n_dims = draw(
+            st.integers(min_value=min_dims, max_value=max(min_dims, max_dims_upper))
+        )
+        min_side = max(1, math.ceil(min_items ** (1 / n_dims))) if min_items > 0 else 1
+        min_dims_shape = n_dims if min_items > 0 else min_dims
+        return draw(
+            st_np.array_shapes(
+                min_dims=min_dims_shape,
+                max_dims=n_dims,
+                min_side=min_side,
+                max_side=max_side,
+            )
+        )
+    else:
+        # Edge case: min_items close to max_items with min_dims > 1
+        size = draw(st.integers(min_value=min_items, max_value=max_items))
+        extra_dims = 0
+        if max_dims is not None and max_dims > min_dims:
+            extra_dims = draw(st.integers(0, max_dims - min_dims))
+        return (size,) + (1,) * (min_dims - 1 + extra_dims)
 
 
 def from_numpy(
