@@ -155,7 +155,9 @@ def test_numpy_arrays(data: st.DataObject) -> None:
 
 ## 4. Edge case reachability tests using `find()`
 
-Use `find()` to verify that specific edge cases can be generated:
+The main property test asserts that invariants hold for every draw — it tests
+universal properties. It cannot assert that something is ever produced. `find()`
+tests the opposite: that there exists a draw satisfying a predicate.
 
 ```python
 def test_draw_empty() -> None:
