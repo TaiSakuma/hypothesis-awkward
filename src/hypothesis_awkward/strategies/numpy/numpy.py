@@ -19,6 +19,7 @@ def numpy_arrays(
     dtype: np.dtype | st.SearchStrategy[np.dtype] | None = None,
     allow_structured: bool = True,
     allow_nan: bool = False,
+    min_dims: int = 1,
     max_dims: int | None = None,
     max_size: int = 10,
 ) -> np.ndarray:
@@ -33,6 +34,8 @@ def numpy_arrays(
         Generate only simple arrays if `False`, else structured arrays as well.
     allow_nan
         Generate potentially `NaN` for relevant dtypes if `True`.
+    min_dims
+        Minimum number of dimensions.
     max_dims
         Maximum number of dimensions. If `None`, auto-derived from `max_size`.
     max_size
@@ -62,9 +65,11 @@ def numpy_arrays(
 
     shape: tuple[int, ...]
     if empty:
-        shape = (0,)
+        shape = (0,) + (1,) * (min_dims - 1)
     else:
-        max_side = draw(st.integers(min_value=1, max_value=max_size))
+        max_side_upper = math.floor(max_size ** (1 / min_dims))
+        max_side_upper = max(1, max_side_upper)
+        max_side = draw(st.integers(min_value=1, max_value=max_side_upper))
         if max_side == 1:
             max_dims_upper = min(NDIM_MAX, max_size)
         else:
@@ -73,8 +78,16 @@ def numpy_arrays(
             )
         if max_dims is not None:
             max_dims_upper = min(max_dims_upper, max_dims)
-        n_dims = draw(st.integers(min_value=1, max_value=max_dims_upper))
-        shape = draw(st_np.array_shapes(max_dims=n_dims, max_side=max_side))
+        n_dims = draw(
+            st.integers(
+                min_value=min_dims, max_value=max(min_dims, max_dims_upper)
+            )
+        )
+        shape = draw(
+            st_np.array_shapes(
+                min_dims=min_dims, max_dims=n_dims, max_side=max_side
+            )
+        )
 
     return draw(
         st_np.arrays(dtype=dtype, shape=shape, elements={'allow_nan': allow_nan})

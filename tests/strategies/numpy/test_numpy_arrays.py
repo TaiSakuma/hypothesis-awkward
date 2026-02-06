@@ -25,15 +25,22 @@ class NumpyArraysKwargs(TypedDict, total=False):
     dtype: np.dtype | st.SearchStrategy[np.dtype] | None
     allow_structured: bool
     allow_nan: bool
+    min_dims: int
     max_dims: int
     max_size: int
 
 
-def numpy_arrays_kwargs() -> st.SearchStrategy[st_ak.Opts[NumpyArraysKwargs]]:
+@st.composite
+def numpy_arrays_kwargs(draw: st.DrawFn) -> st_ak.Opts[NumpyArraysKwargs]:
     '''Strategy for options for `numpy_arrays()` strategy.'''
-    return (
+
+    min_dims, max_dims = draw(st_ak.ranges(min_start=1, max_end=5))
+
+    drawn = (('min_dims', min_dims), ('max_dims', max_dims))
+
+    kwargs = draw(
         st.fixed_dictionaries(
-            {},
+            {k: st.just(v) for k, v in drawn if v is not None},
             optional={
                 'dtype': st.one_of(
                     st.none(),
@@ -42,13 +49,12 @@ def numpy_arrays_kwargs() -> st.SearchStrategy[st_ak.Opts[NumpyArraysKwargs]]:
                 ),
                 'allow_structured': st.booleans(),
                 'allow_nan': st.booleans(),
-                'max_dims': st.integers(min_value=1, max_value=5),
                 'max_size': st.integers(min_value=0, max_value=100),
             },
         )
-        .map(lambda d: cast(NumpyArraysKwargs, d))
-        .map(st_ak.Opts[NumpyArraysKwargs])
     )
+
+    return st_ak.Opts(cast(NumpyArraysKwargs, kwargs))
 
 
 @settings(max_examples=200)
@@ -65,6 +71,7 @@ def test_numpy_arrays(data: st.DataObject) -> None:
     dtype = opts.kwargs.get('dtype', None)
     allow_structured = opts.kwargs.get('allow_structured', True)
     allow_nan = opts.kwargs.get('allow_nan', False)
+    min_dims = opts.kwargs.get('min_dims', 1)
     max_dims = opts.kwargs.get('max_dims', None)
     max_size = opts.kwargs.get('max_size', DEFAULT_MAX_SIZE)
 
@@ -90,6 +97,7 @@ def test_numpy_arrays(data: st.DataObject) -> None:
     if not allow_nan:
         assert not has_nan
 
+    assert len(n.shape) >= min_dims
     if max_dims is not None:
         assert len(n.shape) <= max_dims
 
@@ -190,6 +198,24 @@ def test_draw_max_size() -> None:
     find(
         st_ak.numpy_arrays(allow_structured=False),
         lambda a: math.prod(a.shape) == DEFAULT_MAX_SIZE,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
+
+
+def test_draw_one_dim() -> None:
+    '''Assert that 1-D arrays can be drawn by default.'''
+    find(
+        st_ak.numpy_arrays(allow_structured=False),
+        lambda a: len(a.shape) == 1,
+        settings=settings(phases=[Phase.generate]),
+    )
+
+
+def test_draw_min_dims() -> None:
+    '''Assert that arrays with at least min_dims dimensions can be drawn.'''
+    find(
+        st_ak.numpy_arrays(allow_structured=False, min_dims=2),
+        lambda a: len(a.shape) == 2,
         settings=settings(phases=[Phase.generate], max_examples=2000),
     )
 
