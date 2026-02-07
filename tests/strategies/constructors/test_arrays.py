@@ -104,7 +104,7 @@ def test_draw_max_size() -> None:
     find(
         st_ak.constructors.arrays(max_size=max_size),
         lambda a: _total_scalars(a) == max_size,
-        settings=settings(phases=[Phase.generate], max_examples=2000),
+        settings=settings(phases=[Phase.generate], max_examples=5000),
     )
 
 
