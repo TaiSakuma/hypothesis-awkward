@@ -1,5 +1,3 @@
-import math
-
 import numpy as np
 from hypothesis import strategies as st
 
@@ -47,62 +45,52 @@ def arrays(
 
     '''
     effective_max_depth = max_depth if allow_regular else 0
-    depth = draw(st.integers(min_value=0, max_value=effective_max_depth))
-
-    if depth == 0:
-        data = draw(
-            numpy_arrays(
-                dtype=dtypes,
-                allow_structured=False,
-                allow_nan=allow_nan,
-                max_dims=1,
-                max_size=max_size,
-            )
-        )
-        layout: ak.contents.Content = ak.contents.NumpyArray(data)
+    base = _numpy_leaf(dtypes, allow_nan, max_size)
+    if effective_max_depth == 0:
+        layout = draw(base)
     else:
-        sizes = draw(
-            st.lists(
-                st.integers(min_value=0, max_value=MAX_REGULAR_SIZE),
-                min_size=depth,
-                max_size=depth,
-            )
-        )
-        size_product = math.prod(sizes)
-        if size_product == 0:
-            max_outer = max_size
-        else:
-            max_outer = max_size // size_product
-        outer_len = draw(st.integers(min_value=0, max_value=max_outer))
-
-        # Compute layer lengths top-down
-        layer_len = [0] * depth
-        layer_len[0] = outer_len
-        for i in range(1, depth):
-            layer_len[i] = layer_len[i - 1] * sizes[i - 1] if sizes[i - 1] > 0 else 0
-
-        # Compute leaf element count
-        leaf_count = layer_len[-1] * sizes[-1] if sizes[-1] > 0 else 0
-
-        data = draw(
-            numpy_arrays(
-                dtype=dtypes,
-                allow_structured=False,
-                allow_nan=allow_nan,
-                max_dims=1,
-                min_size=leaf_count,
-                max_size=leaf_count,
-            )
-        )
-        layout = ak.contents.NumpyArray(data)
-
-        # Build RegularArray layers bottom-up
-        for i in reversed(range(depth)):
-            if sizes[i] > 0:
-                layout = ak.contents.RegularArray(layout, size=sizes[i])
-            else:
-                layout = ak.contents.RegularArray(
-                    layout, size=0, zeros_length=layer_len[i]
-                )
-
+        max_leaves = 2 ** (effective_max_depth - 1)
+        layout = draw(st.recursive(base, _wrap_regular, max_leaves=max_leaves))
     return ak.Array(layout)
+
+
+def _numpy_leaf(
+    dtypes: st.SearchStrategy[np.dtype] | None,
+    allow_nan: bool,
+    max_size: int,
+) -> st.SearchStrategy[ak.contents.NumpyArray]:
+    '''Base strategy: leaf NumpyArray Content.'''
+    return numpy_arrays(
+        dtype=dtypes,
+        allow_structured=False,
+        allow_nan=allow_nan,
+        max_dims=1,
+        max_size=max_size,
+    ).map(ak.contents.NumpyArray)
+
+
+@st.composite
+def _wrap_regular(
+    draw: st.DrawFn,
+    children: st.SearchStrategy[ak.contents.Content],
+) -> ak.contents.Content:
+    '''Extend strategy: wrap child Content in a RegularArray.'''
+    child = draw(children)
+    child_len = len(child)
+    if child_len == 0:
+        size = draw(st.integers(min_value=0, max_value=MAX_REGULAR_SIZE))
+        if size == 0:
+            zeros_length = draw(
+                st.integers(min_value=0, max_value=MAX_REGULAR_SIZE)
+            )
+            return ak.contents.RegularArray(
+                child, size=0, zeros_length=zeros_length
+            )
+        return ak.contents.RegularArray(child, size=size)
+    divisors = [
+        d
+        for d in range(1, min(child_len + 1, MAX_REGULAR_SIZE + 1))
+        if child_len % d == 0
+    ]
+    size = draw(st.sampled_from(divisors))
+    return ak.contents.RegularArray(child, size=size)
