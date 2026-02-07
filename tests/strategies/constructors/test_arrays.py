@@ -22,6 +22,7 @@ class ArraysKwargs(TypedDict, total=False):
     dtypes: st.SearchStrategy[np.dtype] | None
     allow_nan: bool
     allow_regular: bool
+    allow_list_offset: bool
     max_size: int
     max_depth: int
 
@@ -38,6 +39,7 @@ def arrays_kwargs() -> st.SearchStrategy[st_ak.Opts[ArraysKwargs]]:
                 ),
                 'allow_nan': st.booleans(),
                 'allow_regular': st.booleans(),
+                'allow_list_offset': st.booleans(),
                 'max_size': st.integers(min_value=0, max_value=50),
                 'max_depth': st.integers(min_value=0, max_value=3),
             },
@@ -65,12 +67,19 @@ def test_arrays(data: st.DataObject) -> None:
     dtypes = opts.kwargs.get('dtypes', None)
     allow_nan = opts.kwargs.get('allow_nan', False)
     allow_regular = opts.kwargs.get('allow_regular', True)
+    allow_list_offset = opts.kwargs.get('allow_list_offset', True)
     max_size = opts.kwargs.get('max_size', DEFAULT_MAX_SIZE)
     max_depth = opts.kwargs.get('max_depth', DEFAULT_MAX_DEPTH)
 
-    # When RegularArray is disallowed or depth is zero, layout must be NumpyArray
-    if not allow_regular or max_depth == 0:
+    # Flat NumpyArray when all structural types disabled or depth is zero
+    if (not allow_regular and not allow_list_offset) or max_depth == 0:
         assert isinstance(a.layout, ak.contents.NumpyArray)
+
+    # Per-type gating
+    if not allow_regular:
+        assert not _has_regular(a)
+    if not allow_list_offset:
+        assert not _has_list_offset(a)
 
     # Dtype check via leaf arrays (works for both flat and nested layouts)
     match dtypes:
@@ -86,7 +95,7 @@ def test_arrays(data: st.DataObject) -> None:
 
     assert _total_scalars(a) <= max_size
 
-    assert _regular_depth(a) <= max_depth
+    assert _nesting_depth(a) <= max_depth
 
 
 def test_draw_empty() -> None:
@@ -133,7 +142,7 @@ def test_draw_max_depth() -> None:
     max_depth = 4
     find(
         st_ak.constructors.arrays(max_depth=max_depth),
-        lambda a: _regular_depth(a) == max_depth,
+        lambda a: _nesting_depth(a) == max_depth,
         settings=settings(phases=[Phase.generate], max_examples=2000),
     )
 
@@ -158,6 +167,55 @@ def test_draw_regular_size_zero() -> None:
     )
 
 
+def test_draw_list_offset() -> None:
+    '''Assert that ListOffsetArray can be drawn by default.'''
+    find(
+        st_ak.constructors.arrays(),
+        _has_list_offset,
+        settings=settings(phases=[Phase.generate]),
+    )
+
+
+def test_draw_variable_length_lists() -> None:
+    '''Assert that variable-length sublists can be drawn.'''
+
+    def _has_variable_length(a: ak.Array) -> bool:
+        node: ak.contents.Content = a.layout
+        while hasattr(node, 'content'):
+            if isinstance(node, ak.contents.ListOffsetArray) and len(node) >= 2:
+                lengths = [len(node[i]) for i in range(len(node))]
+                if len(set(lengths)) > 1:
+                    return True
+            node = node.content
+        return False
+
+    find(
+        st_ak.constructors.arrays(),
+        _has_variable_length,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
+
+
+def test_draw_empty_sublist() -> None:
+    '''Assert that empty sublists can be drawn.'''
+
+    def _has_empty_sublist(a: ak.Array) -> bool:
+        node: ak.contents.Content = a.layout
+        while hasattr(node, 'content'):
+            if isinstance(node, ak.contents.ListOffsetArray):
+                for i in range(len(node)):
+                    if len(node[i]) == 0:
+                        return True
+            node = node.content
+        return False
+
+    find(
+        st_ak.constructors.arrays(),
+        _has_empty_sublist,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
+
+
 def _total_scalars(a: ak.Array) -> int:
     '''Total number of scalar values across all leaf NumPy arrays.'''
     return sum(arr.size for arr in iter_numpy_arrays(a))
@@ -168,11 +226,35 @@ def _leaf_dtypes(a: ak.Array) -> set[np.dtype]:
     return {arr.dtype for arr in iter_numpy_arrays(a)}
 
 
-def _regular_depth(a: ak.Array) -> int:
-    '''Count the depth of nested RegularArrays from the top-level layout.'''
+def _nesting_depth(a: ak.Array) -> int:
+    '''Count total structural wrapping layers (RegularArray and ListOffsetArray).'''
     depth = 0
     node: ak.contents.Content = a.layout
-    while isinstance(node, ak.contents.RegularArray):
+    while isinstance(node, (ak.contents.RegularArray, ak.contents.ListOffsetArray)):
         depth += 1
         node = node.content
     return depth
+
+
+def _has_list_offset(a: ak.Array) -> bool:
+    '''Check if the layout contains any ListOffsetArray node.'''
+    stack: list[ak.contents.Content] = [a.layout]
+    while stack:
+        node = stack.pop()
+        if isinstance(node, ak.contents.ListOffsetArray):
+            return True
+        if hasattr(node, 'content'):
+            stack.append(node.content)
+    return False
+
+
+def _has_regular(a: ak.Array) -> bool:
+    '''Check if the layout contains any RegularArray node.'''
+    stack: list[ak.contents.Content] = [a.layout]
+    while stack:
+        node = stack.pop()
+        if isinstance(node, ak.contents.RegularArray):
+            return True
+        if hasattr(node, 'content'):
+            stack.append(node.content)
+    return False
