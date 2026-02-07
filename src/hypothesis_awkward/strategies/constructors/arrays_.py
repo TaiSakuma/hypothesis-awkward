@@ -22,6 +22,7 @@ def arrays(
     allow_nan: bool = False,
     allow_regular: bool = True,
     allow_list_offset: bool = True,
+    allow_list: bool = True,
     max_size: int = 10,
     max_depth: int = 3,
 ) -> ak.Array:
@@ -41,13 +42,16 @@ def arrays(
     allow_list_offset
         Allow wrapping the leaf ``NumpyArray`` in one or more
         ``ListOffsetArray`` layers if ``True``.
+    allow_list
+        Allow wrapping the leaf ``NumpyArray`` in one or more
+        ``ListArray`` layers if ``True``.
     max_size
         Maximum total number of leaf scalars in the generated array
         (i.e., the sum of ``arr.size`` across all leaf ``NumpyArray``
         nodes).
     max_depth
         Maximum number of nested structural layers (``RegularArray``,
-        ``ListOffsetArray``) wrapping the leaf ``NumpyArray``.  Only
+        ``ListOffsetArray``, ``ListArray``) wrapping the leaf ``NumpyArray``.  Only
         effective when at least one structural type is enabled.
 
     Examples
@@ -61,6 +65,8 @@ def arrays(
         wrappers.append(_wrap_regular)
     if allow_list_offset:
         wrappers.append(_wrap_list_offset)
+    if allow_list:
+        wrappers.append(_wrap_list)
 
     effective_max_depth = max_depth if wrappers else 0
     base = _numpy_leaf(dtypes, allow_nan, max_size)
@@ -146,3 +152,33 @@ def _wrap_list_offset(
         offsets_list = [0, *splits, child_len]
     offsets = np.array(offsets_list, dtype=np.int64)
     return ak.contents.ListOffsetArray(ak.index.Index64(offsets), child)
+
+
+@st.composite
+def _wrap_list(
+    draw: st.DrawFn,
+    children: st.SearchStrategy[ak.contents.Content],
+) -> ak.contents.Content:
+    '''Extend strategy: wrap child Content in a ListArray.'''
+    child = draw(children)
+    child_len = len(child)
+    n = draw(st.integers(min_value=0, max_value=MAX_LIST_LENGTH))
+    if n == 0:
+        offsets_list = [0]
+    elif child_len == 0:
+        offsets_list = [0] * (n + 1)
+    else:
+        splits = sorted(
+            draw(
+                st.lists(
+                    st.integers(min_value=0, max_value=child_len),
+                    min_size=n - 1,
+                    max_size=n - 1,
+                )
+            )
+        )
+        offsets_list = [0, *splits, child_len]
+    offsets = np.array(offsets_list, dtype=np.int64)
+    starts = ak.index.Index64(offsets[:-1])
+    stops = ak.index.Index64(offsets[1:])
+    return ak.contents.ListArray(starts, stops, child)

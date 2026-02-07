@@ -175,6 +175,7 @@ def iter_leaf_contents(
                     stack.append(item[field])
             case (
                 ak.contents.IndexedOptionArray()
+                | ak.contents.ListArray()
                 | ak.contents.ListOffsetArray()
                 | ak.contents.RegularArray()
                 | ak.contents.UnmaskedArray()

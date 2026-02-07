@@ -23,6 +23,7 @@ class ArraysKwargs(TypedDict, total=False):
     allow_nan: bool
     allow_regular: bool
     allow_list_offset: bool
+    allow_list: bool
     max_size: int
     max_depth: int
 
@@ -40,6 +41,7 @@ def arrays_kwargs() -> st.SearchStrategy[st_ak.Opts[ArraysKwargs]]:
                 'allow_nan': st.booleans(),
                 'allow_regular': st.booleans(),
                 'allow_list_offset': st.booleans(),
+                'allow_list': st.booleans(),
                 'max_size': st.integers(min_value=0, max_value=50),
                 'max_depth': st.integers(min_value=0, max_value=3),
             },
@@ -68,11 +70,12 @@ def test_arrays(data: st.DataObject) -> None:
     allow_nan = opts.kwargs.get('allow_nan', False)
     allow_regular = opts.kwargs.get('allow_regular', True)
     allow_list_offset = opts.kwargs.get('allow_list_offset', True)
+    allow_list = opts.kwargs.get('allow_list', True)
     max_size = opts.kwargs.get('max_size', DEFAULT_MAX_SIZE)
     max_depth = opts.kwargs.get('max_depth', DEFAULT_MAX_DEPTH)
 
     # Flat NumpyArray when all structural types disabled or depth is zero
-    if (not allow_regular and not allow_list_offset) or max_depth == 0:
+    if (not allow_regular and not allow_list_offset and not allow_list) or max_depth == 0:
         assert isinstance(a.layout, ak.contents.NumpyArray)
 
     # Per-type gating
@@ -80,6 +83,8 @@ def test_arrays(data: st.DataObject) -> None:
         assert not _has_regular(a)
     if not allow_list_offset:
         assert not _has_list_offset(a)
+    if not allow_list:
+        assert not _has_list(a)
 
     # Dtype check via leaf arrays (works for both flat and nested layouts)
     match dtypes:
@@ -216,6 +221,55 @@ def test_draw_empty_sublist() -> None:
     )
 
 
+def test_draw_list() -> None:
+    '''Assert that ListArray can be drawn by default.'''
+    find(
+        st_ak.constructors.arrays(),
+        _has_list,
+        settings=settings(phases=[Phase.generate]),
+    )
+
+
+def test_draw_list_variable_length() -> None:
+    '''Assert that ListArray with variable-length sublists can be drawn.'''
+
+    def _has_variable_length(a: ak.Array) -> bool:
+        node: ak.contents.Content = a.layout
+        while hasattr(node, 'content'):
+            if isinstance(node, ak.contents.ListArray) and len(node) >= 2:
+                lengths = [len(node[i]) for i in range(len(node))]
+                if len(set(lengths)) > 1:
+                    return True
+            node = node.content
+        return False
+
+    find(
+        st_ak.constructors.arrays(),
+        _has_variable_length,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
+
+
+def test_draw_list_empty_sublist() -> None:
+    '''Assert that ListArray with empty sublists can be drawn.'''
+
+    def _has_empty_sublist(a: ak.Array) -> bool:
+        node: ak.contents.Content = a.layout
+        while hasattr(node, 'content'):
+            if isinstance(node, ak.contents.ListArray):
+                for i in range(len(node)):
+                    if len(node[i]) == 0:
+                        return True
+            node = node.content
+        return False
+
+    find(
+        st_ak.constructors.arrays(),
+        _has_empty_sublist,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
+
+
 def _total_scalars(a: ak.Array) -> int:
     '''Total number of scalar values across all leaf NumPy arrays.'''
     return sum(arr.size for arr in iter_numpy_arrays(a))
@@ -230,7 +284,7 @@ def _nesting_depth(a: ak.Array) -> int:
     '''Count total structural wrapping layers (RegularArray and ListOffsetArray).'''
     depth = 0
     node: ak.contents.Content = a.layout
-    while isinstance(node, (ak.contents.RegularArray, ak.contents.ListOffsetArray)):
+    while isinstance(node, (ak.contents.RegularArray, ak.contents.ListOffsetArray, ak.contents.ListArray)):
         depth += 1
         node = node.content
     return depth
@@ -254,6 +308,18 @@ def _has_regular(a: ak.Array) -> bool:
     while stack:
         node = stack.pop()
         if isinstance(node, ak.contents.RegularArray):
+            return True
+        if hasattr(node, 'content'):
+            stack.append(node.content)
+    return False
+
+
+def _has_list(a: ak.Array) -> bool:
+    '''Check if the layout contains any ListArray node.'''
+    stack: list[ak.contents.Content] = [a.layout]
+    while stack:
+        node = stack.pop()
+        if isinstance(node, ak.contents.ListArray):
             return True
         if hasattr(node, 'content'):
             stack.append(node.content)
