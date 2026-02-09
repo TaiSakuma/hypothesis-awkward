@@ -9,7 +9,7 @@ import hypothesis_awkward.strategies as st_ak
 MAX_REGULAR_SIZE = 5
 MAX_LIST_LENGTH = 5
 
-ExtendFn = Callable[
+_ContentsFn = Callable[
     [st.SearchStrategy[ak.contents.Content]],
     st.SearchStrategy[ak.contents.Content],
 ]
@@ -56,34 +56,34 @@ def arrays(
     <Array ... type='...'>
 
     '''
-    wrappers: list[ExtendFn] = []
+    content_fns: list[_ContentsFn] = []
     if allow_regular:
-        wrappers.append(_wrap_regular)
+        content_fns.append(_regular_array_contents)
     if allow_list_offset:
-        wrappers.append(_wrap_list_offset)
+        content_fns.append(_list_offset_array_contents)
     if allow_list:
-        wrappers.append(_wrap_list)
+        content_fns.append(_list_array_contents)
 
     layout: ak.contents.Content
-    if not wrappers or max_size == 0:
-        layout = draw(_numpy_leaf(dtypes, allow_nan, max_size))
+    if not content_fns or max_size == 0:
+        layout = draw(_numpy_array_contents(dtypes, allow_nan, max_size))
     else:
-        leaf_st = _budgeted_leaf(dtypes, allow_nan, max_size)
+        leaf_st = _BudgetedNumpyArrayContents(dtypes, allow_nan, max_size)
 
-        # Draw nesting depth, then choose a wrapper for each level.
+        # Draw nesting depth, then choose a content function for each level.
         depth = draw(st.integers(min_value=0, max_value=max_depth))
-        chosen_wrappers: list[ExtendFn] = [
-            draw(st.sampled_from(wrappers)) for _ in range(depth)
+        chosen: list[_ContentsFn] = [
+            draw(st.sampled_from(content_fns)) for _ in range(depth)
         ]
 
         layout = draw(leaf_st)
-        for wrapper in reversed(chosen_wrappers):
-            layout = draw(wrapper(st.just(layout)))
+        for fn in reversed(chosen):
+            layout = draw(fn(st.just(layout)))
 
     return ak.Array(layout)
 
 
-def _numpy_leaf(
+def _numpy_array_contents(
     dtypes: st.SearchStrategy[np.dtype] | None,
     allow_nan: bool,
     max_size: int,
@@ -98,7 +98,7 @@ def _numpy_leaf(
     ).map(ak.contents.NumpyArray)
 
 
-def _budgeted_leaf(
+def _BudgetedNumpyArrayContents(
     dtypes: st.SearchStrategy[np.dtype] | None,
     allow_nan: bool,
     max_size: int,
@@ -107,15 +107,15 @@ def _budgeted_leaf(
     remaining = max_size
 
     @st.composite
-    def leaf(draw: st.DrawFn) -> ak.contents.NumpyArray:
+    def _contents(draw: st.DrawFn) -> ak.contents.NumpyArray:
         nonlocal remaining
         if remaining == 0:
             raise _BudgetExhausted
-        result = draw(_numpy_leaf(dtypes, allow_nan, remaining))
+        result = draw(_numpy_array_contents(dtypes, allow_nan, remaining))
         remaining -= len(result)
         return result
 
-    return leaf()
+    return _contents()
 
 
 class _BudgetExhausted(Exception):
@@ -123,11 +123,11 @@ class _BudgetExhausted(Exception):
 
 
 @st.composite
-def _wrap_regular(
+def _regular_array_contents(
     draw: st.DrawFn,
     children: st.SearchStrategy[ak.contents.Content],
 ) -> ak.contents.Content:
-    '''Extend strategy: wrap child Content in a RegularArray.'''
+    '''Strategy for RegularArray Content wrapping child Content.'''
     child = draw(children)
     child_len = len(child)
     if child_len == 0:
@@ -146,11 +146,11 @@ def _wrap_regular(
 
 
 @st.composite
-def _wrap_list_offset(
+def _list_offset_array_contents(
     draw: st.DrawFn,
     children: st.SearchStrategy[ak.contents.Content],
 ) -> ak.contents.Content:
-    '''Extend strategy: wrap child Content in a ListOffsetArray.'''
+    '''Strategy for ListOffsetArray Content wrapping child Content.'''
     child = draw(children)
     child_len = len(child)
     n = draw(st.integers(min_value=0, max_value=MAX_LIST_LENGTH))
@@ -174,11 +174,11 @@ def _wrap_list_offset(
 
 
 @st.composite
-def _wrap_list(
+def _list_array_contents(
     draw: st.DrawFn,
     children: st.SearchStrategy[ak.contents.Content],
 ) -> ak.contents.Content:
-    '''Extend strategy: wrap child Content in a ListArray.'''
+    '''Strategy for ListArray Content wrapping child Content.'''
     child = draw(children)
     child_len = len(child)
     n = draw(st.integers(min_value=0, max_value=MAX_LIST_LENGTH))
