@@ -68,7 +68,7 @@ def arrays(
     if not wrappers or max_size == 0:
         layout = draw(_numpy_leaf(dtypes, allow_nan, max_size))
     else:
-        draw_leaf = _make_draw_leaf(draw, dtypes, allow_nan, max_size)
+        leaf_st = _budgeted_leaf(dtypes, allow_nan, max_size)
 
         # Draw nesting depth, then choose a wrapper for each level.
         depth = draw(st.integers(min_value=0, max_value=max_depth))
@@ -76,7 +76,7 @@ def arrays(
             draw(st.sampled_from(wrappers)) for _ in range(depth)
         ]
 
-        layout = draw_leaf()
+        layout = draw(leaf_st)
         for wrapper in reversed(chosen_wrappers):
             layout = draw(wrapper(st.just(layout)))
 
@@ -98,24 +98,24 @@ def _numpy_leaf(
     ).map(ak.contents.NumpyArray)
 
 
-def _make_draw_leaf(
-    draw: st.DrawFn,
+def _budgeted_leaf(
     dtypes: st.SearchStrategy[np.dtype] | None,
     allow_nan: bool,
     max_size: int,
-) -> Callable[[], ak.contents.NumpyArray]:
-    '''Create a draw_leaf function with a scalar budget.'''
+) -> st.SearchStrategy[ak.contents.NumpyArray]:
+    '''Leaf strategy with a scalar budget.'''
     remaining = max_size
 
-    def draw_leaf() -> ak.contents.NumpyArray:
+    @st.composite
+    def leaf(draw: st.DrawFn) -> ak.contents.NumpyArray:
         nonlocal remaining
         if remaining == 0:
             raise _BudgetExhausted
-        leaf = draw(_numpy_leaf(dtypes, allow_nan, remaining))
-        remaining -= len(leaf)
-        return leaf
+        result = draw(_numpy_leaf(dtypes, allow_nan, remaining))
+        remaining -= len(result)
+        return result
 
-    return draw_leaf
+    return leaf()
 
 
 class _BudgetExhausted(Exception):
