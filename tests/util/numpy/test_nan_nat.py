@@ -72,7 +72,7 @@ def test_draw_nan() -> None:
     find(
         st_np.arrays(dtype=st_np.nested_dtypes(), shape=st_np.array_shapes()),
         _expected_any_nan,
-        settings=settings(phases=[Phase.generate]),
+        settings=settings(phases=[Phase.generate], max_examples=2000),
     )
 
 
