@@ -66,9 +66,7 @@ def numpy_forms(
     if type_ is not None:
         if isinstance(type_, ak.types.NumpyType):
             type_ = st.just(type_)
-        return type_.map(
-            lambda t: ak.forms.NumpyForm(t.primitive)
-        )
+        return type_.map(lambda t: ak.forms.NumpyForm(t.primitive))
 
     # Dtypes mode: generate from dtypes and inner_shape
     if dtypes is None:
