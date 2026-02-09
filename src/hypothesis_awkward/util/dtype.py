@@ -76,7 +76,7 @@ def simple_dtypes_in(d: np.dtype, /) -> set[np.dtype]:
             # Structured dtype
             # e.g., d = dtype([('f0', 'i4'), ('f1', 'f8')])
             return {t for n in names for t in simple_dtypes_in(fields[n][0])}
-        case _:
+        case _:  # pragma: no cover
             raise TypeError(f'Unexpected dtype: {d}')
 
 
@@ -145,5 +145,5 @@ def n_scalars_in(d: np.dtype, /) -> int:
             # Structured dtype
             # e.g., d = dtype([('f0', 'i4'), ('f1', ('f8', (2,)))])
             return sum(n_scalars_in(fields[n][0]) for n in names)
-        case _:
+        case _:  # pragma: no cover
             raise TypeError(f'Unexpected dtype: {d}')
