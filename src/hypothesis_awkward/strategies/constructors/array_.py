@@ -8,10 +8,7 @@ from hypothesis_awkward.strategies.contents.list_array import list_array_content
 from hypothesis_awkward.strategies.contents.list_offset_array import (
     list_offset_array_contents,
 )
-from hypothesis_awkward.strategies.contents.numpy_array import (
-    counted_numpy_array_contents,
-    numpy_array_contents,
-)
+from hypothesis_awkward.strategies.contents.numpy_array import numpy_array_contents
 from hypothesis_awkward.strategies.contents.regular_array import (
     regular_array_contents,
 )
@@ -88,3 +85,32 @@ def arrays(
             layout = draw(fn(st.just(layout)))
 
     return ak.Array(layout)
+
+
+def counted_numpy_array_contents(
+    dtypes: st.SearchStrategy[np.dtype] | None,
+    allow_nan: bool,
+    max_size: int,
+) -> st.SearchStrategy[ak.contents.NumpyArray]:
+    '''Strategy for NumpyArray content with a depleting element count.
+
+    Each draw reduces the remaining element count by the length of
+    the drawn content. Raises ``NumpyArrayContentCountExhausted``
+    when the count reaches zero.
+    '''
+    remaining = max_size
+
+    @st.composite
+    def _contents(draw: st.DrawFn) -> ak.contents.NumpyArray:
+        nonlocal remaining
+        if remaining == 0:
+            raise NumpyArrayContentCountExhausted
+        result = draw(numpy_array_contents(dtypes, allow_nan, remaining))
+        remaining -= len(result)
+        return result
+
+    return _contents()
+
+
+class NumpyArrayContentCountExhausted(Exception):
+    pass
