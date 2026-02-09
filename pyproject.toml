@@ -27,7 +27,10 @@ keywords = ["hypothesis", "awkward-array", "testing", "property-based testing"]
 dependencies = ["awkward>=2.8", "hypothesis>=6.147"]
 
 [project.optional-dependencies]
-pandas = ["pandas>=2.3"]
+pandas = [
+    "pandas>=2.3,<3; python_version < '3.11'",
+    "pandas>=2.3; python_version >= '3.11'",
+]
 arrow = ["pyarrow>=22.0"]
 all = ["hypothesis-awkward[pandas,arrow]"]
 

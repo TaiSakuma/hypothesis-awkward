@@ -2,5 +2,6 @@
 # Used in GitHub Actions for testing compatibility.
 # Monitored by Dependabot.
 awkward==2.8.11
-pandas==3.0.0
+pandas==2.3.3; python_version < '3.11'
+pandas==3.0.0; python_version >= '3.11'
 pyarrow==23.0.0
