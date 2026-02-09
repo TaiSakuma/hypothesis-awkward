@@ -20,11 +20,11 @@ class ArraysKwargs(TypedDict, total=False):
     '''Options for `arrays()` strategy.'''
 
     dtypes: st.SearchStrategy[np.dtype] | None
+    max_size: int
     allow_nan: bool
     allow_regular: bool
     allow_list_offset: bool
     allow_list: bool
-    max_size: int
 
 
 def arrays_kwargs() -> st.SearchStrategy[st_ak.Opts[ArraysKwargs]]:
@@ -37,11 +37,11 @@ def arrays_kwargs() -> st.SearchStrategy[st_ak.Opts[ArraysKwargs]]:
                     st.none(),
                     st.just(st_ak.RecordDraws(st_ak.supported_dtypes())),
                 ),
+                'max_size': st.integers(min_value=0, max_value=50),
                 'allow_nan': st.booleans(),
                 'allow_regular': st.booleans(),
                 'allow_list_offset': st.booleans(),
                 'allow_list': st.booleans(),
-                'max_size': st.integers(min_value=0, max_value=50),
             },
         )
         .map(lambda d: cast(ArraysKwargs, d))
@@ -65,11 +65,11 @@ def test_arrays(data: st.DataObject) -> None:
 
     # Assert the options were effective
     dtypes = opts.kwargs.get('dtypes', None)
+    max_size = opts.kwargs.get('max_size', DEFAULT_MAX_SIZE)
     allow_nan = opts.kwargs.get('allow_nan', False)
     allow_regular = opts.kwargs.get('allow_regular', True)
     allow_list_offset = opts.kwargs.get('allow_list_offset', True)
     allow_list = opts.kwargs.get('allow_list', True)
-    max_size = opts.kwargs.get('max_size', DEFAULT_MAX_SIZE)
 
     # Flat NumpyArray when all structural types disabled
     if not allow_regular and not allow_list_offset and not allow_list:
@@ -92,10 +92,10 @@ def test_arrays(data: st.DataObject) -> None:
             leaf_dtype_names = {d.name for d in _leaf_dtypes(a)}
             assert leaf_dtype_names <= drawn_dtype_names
 
+    assert _total_scalars(a) <= max_size
+
     if not allow_nan:
         assert not any_nan_nat_in_awkward_array(a)
-
-    assert _total_scalars(a) <= max_size
 
 
 def test_draw_empty() -> None:

@@ -114,22 +114,22 @@ and `ListArray` lists.
 ```python
 def arrays(
     dtypes: st.SearchStrategy[np.dtype] | None = None,
+    max_size: int = 10,
     allow_nan: bool = False,
     allow_regular: bool = True,
     allow_list_offset: bool = True,
     allow_list: bool = True,
-    max_size: int = 10,
 ):
 ```
 
 | Parameter | Description |
 | --- | --- |
 | `dtypes` | A strategy for NumPy scalar dtypes used in `NumpyArray`. If `None`, the default strategy that generates any scalar dtype supported by Awkward Array is used. |
+| `max_size` | Maximum total number of scalar values in the generated array. |
 | `allow_nan` | No `NaN`/`NaT` values are generated if `False`. |
 | `allow_regular` | No `RegularArray` is generated if `False`. |
 | `allow_list_offset` | No `ListOffsetArray` is generated if `False`. |
 | `allow_list` | No `ListArray` is generated if `False`. |
-| `max_size` | Maximum total number of scalar values in the generated array. |
 
 ## Other strategies
 
