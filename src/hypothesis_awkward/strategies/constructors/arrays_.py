@@ -68,21 +68,7 @@ def arrays(
     if not wrappers or max_size == 0:
         layout = draw(_numpy_leaf(dtypes, allow_nan, max_size))
     else:
-        remaining = max_size
-
-        def draw_leaf() -> ak.contents.NumpyArray:
-            nonlocal remaining
-            if remaining == 0:
-                raise _BudgetExhausted
-            arr = draw(st_ak.numpy_arrays(
-                dtype=dtypes,
-                allow_structured=False,
-                allow_nan=allow_nan,
-                max_dims=1,
-                max_size=remaining,
-            ))
-            remaining -= arr.size
-            return ak.contents.NumpyArray(arr)
+        draw_leaf = _make_draw_leaf(draw, dtypes, allow_nan, max_size)
 
         # Draw nesting depth, then choose a wrapper for each level.
         depth = draw(st.integers(min_value=0, max_value=max_depth))
@@ -110,6 +96,32 @@ def _numpy_leaf(
         max_dims=1,
         max_size=max_size,
     ).map(ak.contents.NumpyArray)
+
+
+def _make_draw_leaf(
+    draw: st.DrawFn,
+    dtypes: st.SearchStrategy[np.dtype] | None,
+    allow_nan: bool,
+    max_size: int,
+) -> Callable[[], ak.contents.NumpyArray]:
+    '''Create a draw_leaf function with a scalar budget.'''
+    remaining = max_size
+
+    def draw_leaf() -> ak.contents.NumpyArray:
+        nonlocal remaining
+        if remaining == 0:
+            raise _BudgetExhausted
+        arr = draw(st_ak.numpy_arrays(
+            dtype=dtypes,
+            allow_structured=False,
+            allow_nan=allow_nan,
+            max_dims=1,
+            max_size=remaining,
+        ))
+        remaining -= arr.size
+        return ak.contents.NumpyArray(arr)
+
+    return draw_leaf
 
 
 class _BudgetExhausted(Exception):
