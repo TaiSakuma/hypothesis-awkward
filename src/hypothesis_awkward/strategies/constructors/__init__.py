@@ -8,7 +8,7 @@ __all__ = [
     'regular_array_contents',
 ]
 
-from .arrays_ import arrays
+from .array_ import arrays
 from .list_array import list_array_contents
 from .list_offset_array import list_offset_array_contents
 from .numpy_array import (
