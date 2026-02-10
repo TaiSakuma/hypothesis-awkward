@@ -6,6 +6,7 @@ from typing_extensions import Unpack
 
 import hypothesis_awkward.strategies as st_ak
 from hypothesis_awkward.util.draw import CountdownDrawer
+from hypothesis_awkward.util.safe import safe_compare as sc
 
 DEFAULT_MIN_SIZE_EACH = 0
 DEFAULT_MAX_SIZE_TOTAL = 10
@@ -82,9 +83,7 @@ def test_countdown_drawer(data: st.DataObject) -> None:
     assert len(results) <= max_draws
 
     for result in results:
-        assert len(result) >= min_size_each
-        if max_size_each is not None:
-            assert len(result) <= max_size_each
+        assert min_size_each <= len(result) <= sc(max_size_each)
 
 
 def test_draw_max_size_total() -> None:
