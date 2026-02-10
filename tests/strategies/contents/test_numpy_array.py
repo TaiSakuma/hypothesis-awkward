@@ -6,10 +6,16 @@ from hypothesis import strategies as st
 
 import awkward as ak
 import hypothesis_awkward.strategies as st_ak
-from hypothesis_awkward.util import any_nan_in_numpy_array, any_nan_nat_in_numpy_array
+from hypothesis_awkward.util import (
+    any_nan_in_numpy_array,
+    any_nan_nat_in_numpy_array,
+    any_nat_in_numpy_array,
+)
+
+DEFAULT_MAX_SIZE = 10
 
 
-class NumpyArrayContentsKwargs(TypedDict):
+class NumpyArrayContentsKwargs(TypedDict, total=False):
     '''Options for `numpy_array_contents()` strategy.'''
 
     dtypes: st.SearchStrategy[np.dtype] | None
@@ -25,19 +31,18 @@ def numpy_array_contents_kwargs(
     '''Strategy for options for `numpy_array_contents()` strategy.'''
 
     min_size, max_size = draw(
-        st_ak.ranges(
-            min_start=0,
-            max_end=100,
-            allow_start_none=False,
-            allow_end_none=False,
-        )
+        st_ak.ranges(min_start=0, max_start=DEFAULT_MAX_SIZE, max_end=100)
+    )
+
+    drawn = (
+        ('min_size', min_size),
+        ('max_size', max_size),
     )
 
     kwargs = draw(
         st.fixed_dictionaries(
-            {
-                'min_size': st.just(min_size),
-                'max_size': st.just(max_size),
+            {k: st.just(v) for k, v in drawn if v is not None},
+            optional={
                 'dtypes': st.one_of(
                     st.none(),
                     st.just(st_ak.RecordDraws(st_ak.supported_dtypes())),
@@ -73,10 +78,10 @@ def test_numpy_array_contents(data: st.DataObject) -> None:
     assert result.data.dtype.names is None
 
     # Assert size bounds
-    dtypes = opts.kwargs['dtypes']
-    allow_nan = opts.kwargs['allow_nan']
-    min_size = opts.kwargs['min_size']
-    max_size = opts.kwargs['max_size']
+    dtypes = opts.kwargs.get('dtypes', None)
+    allow_nan = opts.kwargs.get('allow_nan', False)
+    min_size = opts.kwargs.get('min_size', 0)
+    max_size = opts.kwargs.get('max_size', DEFAULT_MAX_SIZE)
 
     assert min_size <= len(result) <= max_size
 
@@ -94,9 +99,7 @@ def test_numpy_array_contents(data: st.DataObject) -> None:
 def test_draw_empty() -> None:
     '''Assert that empty arrays can be drawn.'''
     find(
-        st_ak.contents.numpy_array_contents(
-            dtypes=None, allow_nan=False, min_size=0, max_size=10
-        ),
+        st_ak.contents.numpy_array_contents(),
         lambda c: len(c) == 0,
         settings=settings(phases=[Phase.generate]),
     )
@@ -104,12 +107,9 @@ def test_draw_empty() -> None:
 
 def test_draw_max_size() -> None:
     '''Assert that arrays with exactly max_size elements can be drawn.'''
-    max_size = 10
     find(
-        st_ak.contents.numpy_array_contents(
-            dtypes=None, allow_nan=False, min_size=0, max_size=max_size
-        ),
-        lambda c: len(c) == max_size,
+        st_ak.contents.numpy_array_contents(),
+        lambda c: len(c) == DEFAULT_MAX_SIZE,
         settings=settings(phases=[Phase.generate], max_examples=2000),
     )
 
@@ -118,9 +118,7 @@ def test_draw_min_size() -> None:
     '''Assert that arrays with exactly min_size elements can be drawn.'''
     min_size = 5
     find(
-        st_ak.contents.numpy_array_contents(
-            dtypes=None, allow_nan=False, min_size=min_size, max_size=10
-        ),
+        st_ak.contents.numpy_array_contents(min_size=min_size),
         lambda c: len(c) == min_size,
         settings=settings(phases=[Phase.generate]),
     )
@@ -131,8 +129,20 @@ def test_draw_nan() -> None:
     float_dtypes = st_ak.supported_dtypes().filter(lambda d: d.kind == 'f')
     find(
         st_ak.contents.numpy_array_contents(
-            dtypes=float_dtypes, allow_nan=True, min_size=1, max_size=10
+            dtypes=float_dtypes, allow_nan=True, min_size=1
         ),
         lambda c: any_nan_in_numpy_array(c.data),
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
+
+
+def test_draw_nat() -> None:
+    '''Assert that arrays with NaT can be drawn when allowed.'''
+    datetime_dtypes = st_ak.supported_dtypes().filter(lambda d: d.kind in ('M', 'm'))
+    find(
+        st_ak.contents.numpy_array_contents(
+            dtypes=datetime_dtypes, allow_nan=True, min_size=1
+        ),
+        lambda c: any_nat_in_numpy_array(c.data),
         settings=settings(phases=[Phase.generate], max_examples=2000),
     )

@@ -6,10 +6,10 @@ import hypothesis_awkward.strategies as st_ak
 
 
 def numpy_array_contents(
-    dtypes: st.SearchStrategy[np.dtype] | None,
-    allow_nan: bool,
-    min_size: int,
-    max_size: int,
+    dtypes: st.SearchStrategy[np.dtype] | None = None,
+    allow_nan: bool = False,
+    min_size: int = 0,
+    max_size: int = 10,
 ) -> st.SearchStrategy[ak.contents.NumpyArray]:
     '''Strategy for NumpyArray content.'''
     return st_ak.numpy_arrays(
