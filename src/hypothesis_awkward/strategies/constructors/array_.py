@@ -92,26 +92,22 @@ def DrawContent(
     dtypes: st.SearchStrategy[np.dtype] | None,
     allow_nan: bool,
     max_size: int,
-) -> Callable[[], ak.contents.NumpyArray]:
+) -> Callable[[], ak.contents.NumpyArray | None]:
     '''Callable that draws NumpyArray content with a depleting element count.
 
     Returns a function that, when called, draws a ``NumpyArray`` using the
     provided ``draw`` function and reduces the remaining element count by
-    the length of the drawn content. Raises
-    ``NumpyArrayContentCountExhausted`` when the count reaches zero.
+    the length of the drawn content. Returns ``None`` when the count
+    reaches zero.
     '''
     remaining = max_size
 
-    def _draw_content() -> ak.contents.NumpyArray:
+    def _draw_content() -> ak.contents.NumpyArray | None:
         nonlocal remaining
         if remaining == 0:
-            raise NumpyArrayContentCountExhausted
+            return None
         result = draw(numpy_array_contents(dtypes, allow_nan, remaining))
         remaining -= len(result)
         return result
 
     return _draw_content
-
-
-class NumpyArrayContentCountExhausted(Exception):
-    pass
