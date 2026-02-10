@@ -39,6 +39,33 @@ def numpy_arrays_kwargs() -> st.SearchStrategy[NumpyArraysKwargs]:
     ).map(lambda d: cast(NumpyArraysKwargs, d))
 ```
 
+### Min/max pairs with `st_ak.ranges()`
+
+Use `st_ak.ranges()` to generate `(min, max)` pairs where `min <= max` and
+either may be `None`:
+
+```python
+min_size_each, max_size_each = draw(st_ak.ranges(
+    st.integers, min_start=0, max_start=10, max_end=50
+))
+```
+
+Include non-`None` values as required keys in `st.fixed_dictionaries`:
+
+```python
+drawn = (
+    ('min_size_each', min_size_each),
+    ('max_size_each', max_size_each),
+)
+
+return draw(st.fixed_dictionaries(
+    {k: st.just(v) for k, v in drawn if v is not None},
+    optional={...},
+).map(lambda d: cast(MyKwargs, d)))
+```
+
+See `tests/util/test_draw.py` for a full example.
+
 ### Complex case: dependent kwargs
 
 See `tests/strategies/misc/test_ranges.py` for a full example.
@@ -174,7 +201,21 @@ def test_draw_empty() -> None:
 - Use specific dtypes to target relevant types (e.g., `st_np.floating_dtypes()`
   for NaN tests)
 
-## 5. Global constants
+## 5. Optional bounds with `safe_compare`
+
+When an option like `max_size` or `min_size` may be `None`, use
+`safe_compare as sc` to write concise range assertions:
+
+```python
+from hypothesis_awkward.util.safe import safe_compare as sc
+
+assert sc(min_size) <= len(result) <= sc(max_size)
+```
+
+`sc(None)` returns an object that is true for all inequality comparisons,
+so `None` bounds are effectively ignored.
+
+## 6. Global constants
 
 Extract shared values like default parameters:
 
