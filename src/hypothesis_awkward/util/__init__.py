@@ -4,7 +4,7 @@ __all__ = [
     'any_nat_in_awkward_array',
     'iter_numpy_arrays',
     'CountdownDrawer',
-    '_StWithMaxSize',
+    '_StWithMinMaxSize',
     'SUPPORTED_DTYPES',
     'SUPPORTED_DTYPE_NAMES',
     'n_scalars_in',
@@ -24,7 +24,7 @@ from .awkward import (
     any_nat_in_awkward_array,
     iter_numpy_arrays,
 )
-from .draw import CountdownDrawer, _StWithMaxSize
+from .draw import CountdownDrawer, _StWithMinMaxSize
 from .dtype import (
     SUPPORTED_DTYPE_NAMES,
     SUPPORTED_DTYPES,

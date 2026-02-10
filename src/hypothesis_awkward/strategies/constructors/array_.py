@@ -74,9 +74,9 @@ def arrays(
 
     layout: ak.contents.Content
     if not content_fns or max_size == 0:
-        layout = draw(st_(max_size=max_size))
+        layout = draw(st_(min_size=0, max_size=max_size))
     else:
-        draw_content = CountdownDrawer(draw, st_, max_size)
+        draw_content = CountdownDrawer(draw, st_, max_size_total=max_size)
 
         # Draw nesting depth, then choose a content function for each level.
         depth = draw(st.integers(min_value=0, max_value=max_depth))
@@ -86,7 +86,7 @@ def arrays(
 
         content = draw_content()
         if content is None:
-            layout = draw(st_(max_size=0))
+            layout = draw(st_(min_size=0, max_size=0))
         else:
             layout = content
             for fn in reversed(chosen):
