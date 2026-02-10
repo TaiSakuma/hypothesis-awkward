@@ -16,6 +16,7 @@ from hypothesis_awkward.util import (
     n_scalars_in,
     simple_dtype_kinds_in,
 )
+from hypothesis_awkward.util.safe import safe_compare as sc
 
 DEFAULT_MAX_SIZE = 10
 
@@ -107,9 +108,7 @@ def test_numpy_arrays(data: st.DataObject) -> None:
     if not allow_nan:
         assert not has_nan
 
-    assert len(n.shape) >= min_dims
-    if max_dims is not None:
-        assert len(n.shape) <= max_dims
+    assert min_dims <= len(n.shape) <= sc(max_dims)
 
     # Assert an Awkward Array can be created.
     a = ak.from_numpy(n)
