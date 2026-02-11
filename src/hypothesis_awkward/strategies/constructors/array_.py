@@ -11,6 +11,8 @@ def arrays(
     dtypes: st.SearchStrategy[np.dtype] | None = None,
     max_size: int = 10,
     allow_nan: bool = False,
+    allow_numpy: bool = True,
+    allow_empty: bool = True,
     allow_regular: bool = True,
     allow_list_offset: bool = True,
     allow_list: bool = True,
@@ -31,6 +33,12 @@ def arrays(
         Maximum total number of scalar values in the generated array.
     allow_nan
         No ``NaN``/``NaT`` values are generated if ``False``.
+    allow_numpy
+        No ``NumpyArray`` is generated if ``False``.
+    allow_empty
+        No ``EmptyArray`` is generated if ``False``. ``EmptyArray`` has Awkward
+        type ``unknown`` and carries no data. Unlike ``NumpyArray``, it is
+        unaffected by ``dtypes`` and ``allow_nan``.
     allow_regular
         No ``RegularArray`` is generated if ``False``.
     allow_list_offset
@@ -51,6 +59,8 @@ def arrays(
             dtypes=dtypes,
             max_size=max_size,
             allow_nan=allow_nan,
+            allow_numpy=allow_numpy,
+            allow_empty=allow_empty,
             allow_regular=allow_regular,
             allow_list_offset=allow_list_offset,
             allow_list=allow_list,

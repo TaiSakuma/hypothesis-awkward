@@ -15,6 +15,8 @@ class ArraysKwargs(TypedDict, total=False):
     dtypes: st.SearchStrategy[np.dtype] | None
     max_size: int
     allow_nan: bool
+    allow_numpy: bool
+    allow_empty: bool
     allow_regular: bool
     allow_list_offset: bool
     allow_list: bool
@@ -25,6 +27,8 @@ DEFAULTS: ArraysKwargs = {
     'dtypes': None,
     'max_size': 10,
     'allow_nan': False,
+    'allow_numpy': True,
+    'allow_empty': True,
     'allow_regular': True,
     'allow_list_offset': True,
     'allow_list': True,
@@ -43,6 +47,8 @@ def arrays_kwargs() -> st.SearchStrategy[ArraysKwargs]:
             ),
             'max_size': st.integers(min_value=0, max_value=50),
             'allow_nan': st.booleans(),
+            'allow_numpy': st.booleans(),
+            'allow_empty': st.booleans(),
             'allow_regular': st.booleans(),
             'allow_list_offset': st.booleans(),
             'allow_list': st.booleans(),
