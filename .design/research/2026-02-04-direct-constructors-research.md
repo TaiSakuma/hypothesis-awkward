@@ -418,7 +418,8 @@ This can be modeled by passing an `allowed` set or exclusion flags when recursin
 The actual `arrays()` implementation diverged from the recursive `_contents()`
 sketch above. Instead, it uses a **wrappers pattern**:
 
-1. A leaf strategy generates a `NumpyArray` with a scalar budget
+1. A leaf strategy (`leaf_contents()`) generates a `NumpyArray` or `EmptyArray`
+   with a scalar budget
 2. A random depth (0 to `max_depth`) is drawn
 3. Nesting functions (`regular_array_contents`, `list_offset_array_contents`,
    `list_array_contents`) are chosen randomly for each depth level

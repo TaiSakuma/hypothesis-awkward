@@ -40,12 +40,15 @@ Pipeline 3 is the most direct: each Content constructor validates its inputs, so
 the strategy can lean on built-in checks. It also exercises more internal code
 paths than the canonical representations produced by `from_type()`.
 
-### Why Start with NumpyArray Only
+### Why Start with Leaf Nodes (NumpyArray and EmptyArray)
 
-- `NumpyArray` is the leaf node -- every Awkward Array tree terminates in one
+- `NumpyArray` and `EmptyArray` are the leaf nodes -- every Awkward Array tree
+  terminates in one
 - The existing `numpy_arrays()` strategy already generates NumPy ndarrays;
-  `arrays()` reuses this work
-- Starting with a single node type validates the `arrays()` interface before
+  `arrays()` reuses this work via `numpy_array_contents()`
+- `EmptyArray` is a zero-length placeholder with `UnknownType` -- useful for
+  testing edge cases with empty/unknown-typed arrays
+- Starting with leaf node types validates the `arrays()` interface before
   adding recursive complexity
 - Users get immediate value: `arrays()` with no arguments generates flat arrays,
   which is the most common case
@@ -79,7 +82,11 @@ def arrays(
     # --- Size control ---
     max_size: int = 10,
 
-    # --- Node type control ---
+    # --- Leaf type control ---
+    allow_numpy: bool = True,
+    allow_empty: bool = True,
+
+    # --- Nesting type control ---
     allow_regular: bool = True,
     allow_list_offset: bool = True,
     allow_list: bool = True,
@@ -119,10 +126,20 @@ Generate potentially `NaN`/`NaT` values for relevant dtypes.
 Maximum total number of scalar values in the generated array.
 
 - Default: `10`.
-- Controls the total scalar budget across all leaf `NumpyArray` nodes, not just
-  the outermost dimension length.
+- Controls the total scalar budget across all leaf nodes, not just the outermost
+  dimension length. `EmptyArray` leaves consume no budget (length 0).
 - Uses a "budgeted leaf" approach: each leaf draws up to the remaining budget,
   preventing compound arrays from growing unboundedly.
+
+#### `allow_numpy`, `allow_empty`
+
+Control which leaf Content node types are enabled.
+
+- Both default to `True`.
+- `allow_numpy`: Generate `NumpyArray` leaves (primitive data).
+- `allow_empty`: Generate `EmptyArray` leaves (zero-length, `UnknownType`).
+  `EmptyArray` is unaffected by `dtypes` and `allow_nan`.
+- At least one leaf type must be enabled; disabling both raises `ValueError`.
 
 #### `allow_regular`, `allow_list_offset`, `allow_list`
 
@@ -134,7 +151,8 @@ Control which structural Content node types are enabled.
   via offsets).
 - `allow_list`: Generate `ListArray` wrappers (variable-length lists via
   starts/stops).
-- When all three are `False`, only flat `NumpyArray`-backed arrays are generated.
+- When all three are `False`, only flat leaf arrays are generated (`NumpyArray`
+  and/or `EmptyArray`).
 
 Future node type flags (not yet implemented): `allow_record`, `allow_option`,
 `allow_union`, `allow_string`.
@@ -221,8 +239,8 @@ The implementation is split across two packages:
 
 The `contents()` strategy in `contents/content.py` uses a wrappers pattern:
 
-1. **Leaf strategy**: `numpy_array_contents()` generates a `NumpyArray` Content
-   with a scalar budget managed by `CountdownDrawer`
+1. **Leaf strategy**: `leaf_contents()` generates a `NumpyArray` or `EmptyArray`
+   Content with a scalar budget managed by `CountdownDrawer`
 2. A random depth (0 to `max_depth`) is drawn
 3. Nesting functions (`regular_array_contents`, `list_offset_array_contents`,
    `list_array_contents`) are chosen randomly for each depth level
@@ -269,7 +287,9 @@ src/hypothesis_awkward/strategies/
 +-- contents/
 |   +-- __init__.py           # Re-exports contents() and individual content strategies
 |   +-- content.py            # contents() — top-level content layout strategy
+|   +-- leaf.py               # leaf_contents() — leaf node strategy (NumpyArray | EmptyArray)
 |   +-- numpy_array.py        # numpy_array_contents()
+|   +-- empty_array.py        # empty_array_contents()
 |   +-- regular_array.py      # regular_array_contents()
 |   +-- list_offset_array.py  # list_offset_array_contents()
 |   +-- list_array.py         # list_array_contents()
@@ -294,7 +314,9 @@ added, new content strategies will be added to `contents/`:
 src/hypothesis_awkward/strategies/contents/
 +-- __init__.py
 +-- content.py                # Main contents() strategy (recursive composition)
++-- leaf.py                   # leaf_contents() — leaf node strategy
 +-- numpy_array.py            # numpy_array_contents()
++-- empty_array.py            # empty_array_contents()
 +-- regular_array.py          # regular_array_contents()
 +-- list_offset_array.py      # list_offset_array_contents()
 +-- list_array.py             # list_array_contents()
@@ -408,7 +430,8 @@ interface strict and revisit based on user feedback.
 ### 7. Add `allow_*` Flags Only When Implemented
 
 **Decision:** Only include `allow_*` flags for node types that are actually
-implemented. Currently: `allow_regular`, `allow_list_offset`, `allow_list`.
+implemented. Currently: `allow_numpy`, `allow_empty` (leaf types),
+`allow_regular`, `allow_list_offset`, `allow_list` (nesting types).
 
 **Rationale:**
 
@@ -482,7 +505,7 @@ def test_larger_arrays(a):
     allow_regular=False, allow_list_offset=False, allow_list=False,
 ))
 def test_flat_arrays(a):
-    assert isinstance(a.layout, ak.contents.NumpyArray)
+    assert isinstance(a.layout, (ak.contents.NumpyArray, ak.contents.EmptyArray))
 ```
 
 ### Future: With Type Constraint
@@ -523,6 +546,7 @@ Since `arrays()` is a thin wrapper around `contents()`, the test mocks
 tests/strategies/contents/
 +-- __init__.py
 +-- test_content.py           # contents() strategy tests
++-- test_empty_array.py       # empty_array_contents() tests
 +-- test_numpy_array.py       # numpy_array_contents() tests
 +-- test_regular_array.py     # regular_array_contents() tests
 +-- test_list_offset_array.py # list_offset_array_contents() tests
@@ -590,10 +614,9 @@ Accept `np.dtype | st.SearchStrategy[np.dtype] | None` as in `numpy_arrays()`.
 
 ## Open Questions
 
-1. **Should `allow_empty` be a parameter?** Awkward Array has `EmptyArray` (a
-   zero-length placeholder with `UnknownType`). Should `arrays()` be able to
-   generate these? They are unusual and may cause issues in downstream code.
-   Tentative answer: No, defer to a future `allow_empty` flag.
+1. ~~**Should `allow_empty` be a parameter?**~~ **Resolved.** Yes, `allow_empty`
+   is now implemented (default `True`). `EmptyArray` leaves are generated via
+   `leaf_contents()` when `allow_empty=True` and `min_size == 0`.
 
 2. **Should `allow_indexed` be a parameter?** `IndexedArray` is type-transparent
    (it does not change the type of its content). It adds a level of indirection
