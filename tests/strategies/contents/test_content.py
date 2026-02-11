@@ -24,6 +24,7 @@ class ContentsKwargs(TypedDict, total=False):
     max_size: int
     allow_nan: bool
     allow_numpy: bool
+    allow_empty: bool
     allow_regular: bool
     allow_list_offset: bool
     allow_list: bool
@@ -43,6 +44,7 @@ def contents_kwargs() -> st.SearchStrategy[st_ak.Opts[ContentsKwargs]]:
                 'max_size': st.integers(min_value=0, max_value=50),
                 'allow_nan': st.booleans(),
                 'allow_numpy': st.booleans(),
+                'allow_empty': st.booleans(),
                 'allow_regular': st.booleans(),
                 'allow_list_offset': st.booleans(),
                 'allow_list': st.booleans(),
@@ -64,7 +66,8 @@ def test_contents(data: st.DataObject) -> None:
 
     # Assert that disabling all leaf types raises an error
     allow_numpy = opts.kwargs.get('allow_numpy', True)
-    if not allow_numpy:
+    allow_empty = opts.kwargs.get('allow_empty', True)
+    if not allow_numpy and not allow_empty:
         with pytest.raises(ValueError, match='at least one leaf'):
             data.draw(st_ak.contents.contents(**opts.kwargs), label='c')
         return
@@ -84,9 +87,9 @@ def test_contents(data: st.DataObject) -> None:
     allow_list = opts.kwargs.get('allow_list', True)
     max_depth = opts.kwargs.get('max_depth', DEFAULT_MAX_DEPTH)
 
-    # Flat NumpyArray when all structural types disabled
+    # Flat leaf when all structural types disabled
     if not allow_regular and not allow_list_offset and not allow_list:
-        assert isinstance(c, ak.contents.NumpyArray)
+        assert isinstance(c, (ak.contents.NumpyArray, ak.contents.EmptyArray))
 
     # Per-type gating
     if not allow_regular:

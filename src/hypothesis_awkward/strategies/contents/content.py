@@ -1,4 +1,3 @@
-import functools
 from collections.abc import Callable
 
 import numpy as np
@@ -21,6 +20,7 @@ def contents(
     max_size: int = 10,
     allow_nan: bool = False,
     allow_numpy: bool = True,
+    allow_empty: bool = True,
     allow_regular: bool = True,
     allow_list_offset: bool = True,
     allow_list: bool = True,
@@ -43,6 +43,10 @@ def contents(
         No ``NaN``/``NaT`` values are generated if ``False``.
     allow_numpy
         No ``NumpyArray`` is generated if ``False``.
+    allow_empty
+        No ``EmptyArray`` is generated if ``False``. ``EmptyArray`` has Awkward
+        type ``unknown`` and carries no data. Unlike ``NumpyArray``, it is
+        unaffected by ``dtypes`` and ``allow_nan``.
     allow_regular
         No ``RegularArray`` is generated if ``False``.
     allow_list_offset
@@ -59,7 +63,7 @@ def contents(
     True
 
     '''
-    if not allow_numpy:
+    if not allow_numpy and not allow_empty:
         raise ValueError('at least one leaf content type must be allowed')
 
     nesting_fns: list[_NestingFn] = []
@@ -70,7 +74,17 @@ def contents(
     if allow_list:
         nesting_fns.append(st_ak.contents.list_array_contents)
 
-    st_leaf = functools.partial(st_ak.contents.numpy_array_contents, dtypes, allow_nan)
+    def st_leaf(*, min_size: int, max_size: int) -> st.SearchStrategy[ak.contents.Content]:
+        options: list[st.SearchStrategy[ak.contents.Content]] = []
+        if allow_numpy:
+            options.append(
+                st_ak.contents.numpy_array_contents(
+                    dtypes, allow_nan, min_size=min_size, max_size=max_size
+                )
+            )
+        if allow_empty and min_size == 0:
+            options.append(st_ak.contents.empty_array_contents())
+        return st.one_of(options)
 
     if not nesting_fns or max_size == 0:
         return draw(st_leaf(min_size=0, max_size=max_size))

@@ -1,4 +1,3 @@
-import pytest
 from hypothesis import Phase, find, given, settings
 from hypothesis import strategies as st
 
@@ -17,7 +16,6 @@ def test_empty_array_contents(data: st.DataObject) -> None:
     assert len(result) == 0
 
 
-@pytest.mark.skip(reason='contents() does not yet produce EmptyArray')
 def test_draw_from_contents() -> None:
     '''Assert that EmptyArray can be drawn from `contents()`.'''
     find(
