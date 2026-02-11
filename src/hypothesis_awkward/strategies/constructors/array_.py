@@ -124,16 +124,15 @@ def contents(
         return draw(st_leaf(min_size=0, max_size=max_size))
 
     draw_leaf = CountdownDrawer(draw, st_leaf, max_size_total=max_size)
+    content = draw_leaf()
+    if content is None:
+        return draw(st_leaf(min_size=0, max_size=0))
 
     # Draw nesting depth, then choose a nesting function for each level.
     depth = draw(st.integers(min_value=0, max_value=max_depth))
     nesting: list[_NestingFn] = [
         draw(st.sampled_from(nesting_fns)) for _ in range(depth)
     ]
-
-    content = draw_leaf()
-    if content is None:
-        return draw(st_leaf(min_size=0, max_size=0))
 
     for fn in reversed(nesting):
         content = draw(fn(st.just(content)))
