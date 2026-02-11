@@ -2,6 +2,7 @@ import numpy as np
 from hypothesis import strategies as st
 
 import awkward as ak
+import hypothesis_awkward.strategies as st_ak
 
 MAX_LIST_LENGTH = 5
 
@@ -9,9 +10,11 @@ MAX_LIST_LENGTH = 5
 @st.composite
 def list_array_contents(
     draw: st.DrawFn,
-    contents: st.SearchStrategy[ak.contents.Content],
+    contents: st.SearchStrategy[ak.contents.Content] | None = None,
 ) -> ak.contents.Content:
     '''Strategy for ListArray Content wrapping child Content.'''
+    if contents is None:
+        contents = st_ak.contents.contents()
     content = draw(contents)
     content_len = len(content)
     n = draw(st.integers(min_value=0, max_value=MAX_LIST_LENGTH))

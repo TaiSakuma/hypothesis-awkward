@@ -15,7 +15,7 @@ def regular_array_contents(
 ) -> ak.contents.Content:
     '''Strategy for RegularArray Content wrapping child Content.'''
     if contents is None:
-        contents = st_ak.contents.numpy_array_contents()
+        contents = st_ak.contents.contents()
     content = draw(contents)
     content_len = len(content)
     if content_len == 0:
