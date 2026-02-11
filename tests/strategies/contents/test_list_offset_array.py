@@ -1,6 +1,6 @@
 from typing import TypedDict, cast
 
-from hypothesis import given, settings
+from hypothesis import Phase, find, given, settings
 from hypothesis import strategies as st
 
 import hypothesis_awkward.strategies as st_ak
@@ -69,3 +69,63 @@ def test_list_offset_array_contents(data: st.DataObject) -> None:
         case st_ak.RecordDraws():
             assert len(content.drawn) == 1
             assert result.content is content.drawn[0]
+
+
+def test_draw_from_contents() -> None:
+    '''Assert that ListOffsetArray can be drawn from `contents()`.'''
+
+    def _has_list_offset(c: Content) -> bool:
+        stack: list[Content] = [c]
+        while stack:
+            node = stack.pop()
+            if isinstance(node, ListOffsetArray):
+                return True
+            if hasattr(node, 'content'):
+                stack.append(node.content)
+        return False
+
+    find(
+        st_ak.contents.contents(),
+        _has_list_offset,
+        settings=settings(phases=[Phase.generate]),
+    )
+
+
+def test_draw_from_contents_variable_length() -> None:
+    '''Assert that variable-length sublists can be drawn from `contents()`.'''
+
+    def _has_variable_length(c: Content) -> bool:
+        node = c
+        while hasattr(node, 'content'):
+            if isinstance(node, ListOffsetArray) and len(node) >= 2:
+                lengths = [len(node[i]) for i in range(len(node))]
+                if len(set(lengths)) > 1:
+                    return True
+            node = node.content
+        return False
+
+    find(
+        st_ak.contents.contents(),
+        _has_variable_length,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
+
+
+def test_draw_from_contents_empty_sublist() -> None:
+    '''Assert that empty sublists can be drawn from `contents()`.'''
+
+    def _has_empty_sublist(c: Content) -> bool:
+        node = c
+        while hasattr(node, 'content'):
+            if isinstance(node, ListOffsetArray):
+                for i in range(len(node)):
+                    if len(node[i]) == 0:
+                        return True
+            node = node.content
+        return False
+
+    find(
+        st_ak.contents.contents(),
+        _has_empty_sublist,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )

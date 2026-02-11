@@ -6,6 +6,7 @@ from hypothesis import strategies as st
 
 import awkward as ak
 import hypothesis_awkward.strategies as st_ak
+from awkward.contents import NumpyArray
 from hypothesis_awkward.util import (
     any_nan_in_numpy_array,
     any_nan_nat_in_numpy_array,
@@ -94,6 +95,24 @@ def test_numpy_array_contents(data: st.DataObject) -> None:
         case st_ak.RecordDraws():
             drawn_kinds = {d.kind for d in dtypes.drawn}
             assert result.data.dtype.kind in drawn_kinds
+
+
+def test_draw_from_contents() -> None:
+    '''Assert that NumpyArray can be drawn from `contents()`.'''
+    find(
+        st_ak.contents.contents(),
+        lambda c: isinstance(c, NumpyArray),
+        settings=settings(phases=[Phase.generate]),
+    )
+
+
+def test_draw_from_contents_length_zero() -> None:
+    '''Assert that NumpyArray with length 0 can be drawn from `contents()`.'''
+    find(
+        st_ak.contents.contents(),
+        lambda c: isinstance(c, NumpyArray) and len(c) == 0,
+        settings=settings(phases=[Phase.generate]),
+    )
 
 
 def test_draw_empty() -> None:

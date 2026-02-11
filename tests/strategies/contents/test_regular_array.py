@@ -1,6 +1,6 @@
 from typing import TypedDict, cast
 
-from hypothesis import given, settings
+from hypothesis import Phase, find, given, settings
 from hypothesis import strategies as st
 
 import hypothesis_awkward.strategies as st_ak
@@ -65,3 +65,23 @@ def test_regular_array_contents(data: st.DataObject) -> None:
         case st_ak.RecordDraws():
             assert len(content.drawn) == 1
             assert result.content is content.drawn[0]
+
+
+def test_draw_from_contents_size_zero() -> None:
+    '''Assert that RegularArray with size=0 can be drawn from `contents()`.'''
+
+    def _has_regular_size_zero(c: Content) -> bool:
+        stack: list[Content] = [c]
+        while stack:
+            node = stack.pop()
+            if isinstance(node, RegularArray) and node.size == 0:
+                return True
+            if hasattr(node, 'content'):
+                stack.append(node.content)
+        return False
+
+    find(
+        st_ak.contents.contents(),
+        _has_regular_size_zero,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
