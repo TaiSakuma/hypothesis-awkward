@@ -51,8 +51,9 @@ def contents(
 
     Examples
     --------
-    >>> contents().example()
-    <NumpyArray ...>
+    >>> c = contents().example()
+    >>> isinstance(c, ak.contents.Content)
+    True
 
     '''
     nesting_fns: list[_NestingFn] = []
