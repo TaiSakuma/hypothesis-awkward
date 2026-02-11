@@ -124,7 +124,7 @@ def test_draw_max_size_total() -> None:
     find(
         _exhaust(min_size_each=1, max_size_total=max_size_total),
         lambda r: r[0] == max_size_total,
-        settings=settings(phases=[Phase.generate]),
+        settings=settings(phases=[Phase.generate], max_examples=2000),
     )
 
 
