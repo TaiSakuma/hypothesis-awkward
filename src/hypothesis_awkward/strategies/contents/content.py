@@ -70,7 +70,7 @@ def contents(
         nesting_fns.append(st_ak.contents.list_array_contents)
 
     st_leaf = functools.partial(
-        _st_leaf,
+        leaf_contents,
         dtypes=dtypes,
         allow_nan=allow_nan,
         allow_numpy=allow_numpy,
@@ -97,14 +97,14 @@ def contents(
     return content
 
 
-def _st_leaf(
+def leaf_contents(
     *,
-    dtypes: st.SearchStrategy[np.dtype] | None,
-    allow_nan: bool,
-    allow_numpy: bool,
-    allow_empty: bool,
-    min_size: int,
-    max_size: int,
+    dtypes: st.SearchStrategy[np.dtype] | None = None,
+    allow_nan: bool = False,
+    min_size: int = 0,
+    max_size: int = 10,
+    allow_numpy: bool = True,
+    allow_empty: bool = True,
 ) -> st.SearchStrategy[NumpyArray | EmptyArray]:
     if not allow_numpy and not allow_empty:
         raise ValueError('at least one leaf content type must be allowed')
