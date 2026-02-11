@@ -1,10 +1,11 @@
+import functools
 from collections.abc import Callable
 
 import numpy as np
 from hypothesis import strategies as st
 
 import hypothesis_awkward.strategies as st_ak
-from awkward.contents import Content
+from awkward.contents import Content, EmptyArray, NumpyArray
 from hypothesis_awkward.util.draw import CountdownDrawer
 
 _NestingFn = Callable[[st.SearchStrategy[Content]], st.SearchStrategy[Content]]
@@ -60,9 +61,6 @@ def contents(
     True
 
     '''
-    if not allow_numpy and not allow_empty:
-        raise ValueError('at least one leaf content type must be allowed')
-
     nesting_fns: list[_NestingFn] = []
     if allow_regular:
         nesting_fns.append(st_ak.contents.regular_array_contents)
@@ -71,17 +69,13 @@ def contents(
     if allow_list:
         nesting_fns.append(st_ak.contents.list_array_contents)
 
-    def st_leaf(*, min_size: int, max_size: int) -> st.SearchStrategy[Content]:
-        options: list[st.SearchStrategy[Content]] = []
-        if allow_numpy:
-            options.append(
-                st_ak.contents.numpy_array_contents(
-                    dtypes, allow_nan, min_size=min_size, max_size=max_size
-                )
-            )
-        if allow_empty and min_size == 0:
-            options.append(st_ak.contents.empty_array_contents())
-        return st.one_of(options)
+    st_leaf = functools.partial(
+        _st_leaf,
+        dtypes=dtypes,
+        allow_nan=allow_nan,
+        allow_numpy=allow_numpy,
+        allow_empty=allow_empty,
+    )
 
     if not nesting_fns or max_size == 0:
         return draw(st_leaf(min_size=0, max_size=max_size))
@@ -101,3 +95,27 @@ def contents(
         content = draw(fn(st.just(content)))
 
     return content
+
+
+def _st_leaf(
+    *,
+    dtypes: st.SearchStrategy[np.dtype] | None,
+    allow_nan: bool,
+    allow_numpy: bool,
+    allow_empty: bool,
+    min_size: int,
+    max_size: int,
+) -> st.SearchStrategy[NumpyArray | EmptyArray]:
+    if not allow_numpy and not allow_empty:
+        raise ValueError('at least one leaf content type must be allowed')
+
+    options: list[st.SearchStrategy[NumpyArray | EmptyArray]] = []
+    if allow_numpy:
+        options.append(
+            st_ak.contents.numpy_array_contents(
+                dtypes, allow_nan, min_size=min_size, max_size=max_size
+            )
+        )
+    if allow_empty and min_size == 0:
+        options.append(st_ak.contents.empty_array_contents())
+    return st.one_of(options)
