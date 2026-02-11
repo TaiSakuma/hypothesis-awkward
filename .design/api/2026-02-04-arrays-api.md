@@ -525,6 +525,8 @@ tests/strategies/contents/
 +-- test_content.py           # contents() strategy tests
 +-- test_numpy_array.py       # numpy_array_contents() tests
 +-- test_regular_array.py     # regular_array_contents() tests
++-- test_list_offset_array.py # list_offset_array_contents() tests
++-- test_list_array.py        # list_array_contents() tests
 
 tests/strategies/constructors/
 +-- __init__.py

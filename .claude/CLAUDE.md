@@ -42,7 +42,7 @@ uv run ruff format src tests
 - **`strategies/`** - Public Hypothesis strategies (imported as
   `hypothesis_awkward.strategies`)
   - `numpy/` - Strategies for Awkward Arrays from NumPy: `from_numpy`,
-    `numpy_arrays`, `numpy_dtypes`, `supported_dtypes`
+    `numpy_arrays`, `numpy_dtypes`, `supported_dtype_names`, `supported_dtypes`
   - `builtins_/` - Strategies for Awkward Arrays from Python lists: `from_list`,
     `lists`, `items_from_dtype`, `builtin_safe_dtypes`
   - `contents/` - Strategies for Awkward Array content layouts:

@@ -24,7 +24,7 @@ This pattern is now documented in
 [testing-patterns.md](./../../.claude/rules/testing-patterns.md) and used in:
 
 - `tests/strategies/forms/test_numpy_forms.py`
-- `tests/strategies/constructors/test_arrays.py`
+- `tests/strategies/constructors/test_array.py`
 
 ## Remaining Tests to Write
 

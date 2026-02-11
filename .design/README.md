@@ -10,7 +10,8 @@ hypothesis-awkward.
 ├── README.md          # This file
 ├── research/          # UX research interviews and findings
 ├── api/               # API design proposals and decisions
-└── impl/              # Implementation decisions (directory structure, internals)
+├── impl/              # Implementation decisions (directory structure, internals)
+└── notes/             # Progress tracking and working notes
 ```
 
 ## Purpose
@@ -23,6 +24,8 @@ hypothesis-awkward.
 
 - **impl/**: Store implementation decisions that don't affect the user-facing API,
   such as directory structure, module organization, and internal architecture.
+
+- **notes/**: Store progress tracking and working notes for ongoing work.
 
 ## Naming Convention
 
