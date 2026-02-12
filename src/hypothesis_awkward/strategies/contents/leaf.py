@@ -21,7 +21,7 @@ def leaf_contents(
     if allow_numpy:
         options.append(
             st_ak.contents.numpy_array_contents(
-                dtypes, allow_nan, min_size=min_size, max_size=max_size
+                dtypes=dtypes, allow_nan=allow_nan, min_size=min_size, max_size=max_size
             )
         )
     if allow_empty and min_size == 0:

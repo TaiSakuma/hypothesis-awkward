@@ -113,6 +113,7 @@ contents that can be nested multiple levels deep in `RegularArray`,
 
 ```python
 def arrays(
+    *,
     dtypes: st.SearchStrategy[np.dtype] | None = None,
     max_size: int = 10,
     allow_nan: bool = False,

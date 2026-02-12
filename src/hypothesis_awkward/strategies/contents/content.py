@@ -15,6 +15,7 @@ _NestingFn = Callable[[st.SearchStrategy[Content]], st.SearchStrategy[Content]]
 @st.composite
 def contents(
     draw: st.DrawFn,
+    *,
     dtypes: st.SearchStrategy[np.dtype] | None = None,
     max_size: int = 10,
     allow_nan: bool = False,

@@ -25,6 +25,7 @@ def _inner_shapes(
 
 def numpy_forms(
     type_: ak.types.NumpyType | st.SearchStrategy[ak.types.NumpyType] | None = None,
+    *,
     dtypes: st.SearchStrategy[np.dtype] | None = None,
     allow_datetime: bool = True,
     inner_shape: tuple[int, ...] | st.SearchStrategy[tuple[int, ...]] | None = None,

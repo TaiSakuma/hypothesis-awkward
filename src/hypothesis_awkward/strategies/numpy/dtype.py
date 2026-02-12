@@ -32,6 +32,7 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
 
 
 def numpy_dtypes(
+    *,
     dtype: np.dtype | st.SearchStrategy[np.dtype] | None = None,
     allow_array: bool = True,
     max_size: int = 5,

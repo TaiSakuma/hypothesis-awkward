@@ -1,7 +1,7 @@
 # Positional vs Keyword-Only Parameter Convention
 
 **Date:** 2026-02-12
-**Status:** Proposed
+**Status:** Adopted
 
 ## Hypothesis Pattern
 

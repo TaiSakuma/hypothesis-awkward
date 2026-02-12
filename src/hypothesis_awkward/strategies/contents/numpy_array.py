@@ -6,6 +6,7 @@ import hypothesis_awkward.strategies as st_ak
 
 
 def numpy_array_contents(
+    *,
     dtypes: st.SearchStrategy[np.dtype] | None = None,
     allow_nan: bool = False,
     min_size: int = 0,

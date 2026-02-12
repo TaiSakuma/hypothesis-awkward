@@ -41,7 +41,7 @@ def builtin_safe_dtypes() -> st.SearchStrategy[np.dtype]:
 
 
 def items_from_dtype(
-    dtype: np.dtype, allow_nan: bool = False
+    dtype: np.dtype, *, allow_nan: bool = False
 ) -> st.SearchStrategy[Any]:
     '''Strategy for Python built-in type values for a given NumPy dtype.
 

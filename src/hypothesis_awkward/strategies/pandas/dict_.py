@@ -9,6 +9,7 @@ import hypothesis_awkward.strategies as st_ak
 @st.composite
 def dicts_for_dataframe(
     draw: st.DrawFn,
+    *,
     max_columns: int = 4,
     min_rows: int = 0,
     max_rows: int | None = None,

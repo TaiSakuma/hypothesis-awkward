@@ -16,6 +16,7 @@ NDIM_MAX = 32
 @st.composite
 def numpy_arrays(
     draw: st.DrawFn,
+    *,
     dtype: np.dtype | st.SearchStrategy[np.dtype] | None = None,
     allow_structured: bool = True,
     allow_nan: bool = False,
@@ -159,6 +160,7 @@ def _st_empty(min_items: int, max_items: int) -> st.SearchStrategy[bool]:
 
 
 def from_numpy(
+    *,
     dtype: np.dtype | st.SearchStrategy[np.dtype] | None = None,
     allow_structured: bool = True,
     allow_nan: bool = False,

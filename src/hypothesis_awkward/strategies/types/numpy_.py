@@ -6,6 +6,7 @@ from hypothesis_awkward.util import SUPPORTED_DTYPES
 
 
 def numpy_types(
+    *,
     dtypes: st.SearchStrategy[np.dtype] | None = None,
     allow_datetime: bool = True,
 ) -> st.SearchStrategy[ak.types.NumpyType]:

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from hypothesis import strategies as st
 
 import hypothesis_awkward.strategies as st_ak

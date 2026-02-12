@@ -13,6 +13,7 @@ NestedList: TypeAlias = 'list[Any | NestedList]'
 @st.composite
 def lists(
     draw: st.DrawFn,
+    *,
     dtype: np.dtype | st.SearchStrategy[np.dtype] | None = None,
     allow_nan: bool = False,
     max_size: int = 10,
@@ -52,6 +53,7 @@ def lists(
 
 
 def from_list(
+    *,
     dtype: np.dtype | st.SearchStrategy[np.dtype] | None = None,
     allow_nan: bool = False,
     max_size: int = 10,

@@ -8,6 +8,7 @@ import hypothesis_awkward.strategies as st_ak
 @st.composite
 def arrays(
     draw: st.DrawFn,
+    *,
     dtypes: st.SearchStrategy[np.dtype] | None = None,
     max_size: int = 10,
     allow_nan: bool = False,
