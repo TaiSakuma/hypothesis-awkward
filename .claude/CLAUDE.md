@@ -86,5 +86,6 @@ doctest support for examples in docstrings and markdown files.
 - Use single quotes (`'''`) for docstrings.
 - Prefer single quotes (`'`) for strings.
 - Use absolute imports for parent packages (e.g., `from hypothesis_awkward.strategies.numpy import numpy_arrays`, not `from ..numpy import numpy_arrays`). Same-package relative imports (e.g., `from .arrays_ import arrays`) are fine.
+- For forward references in type annotations, prefer string quotes (e.g., `-> 'MyClass[Any]'`) over `from __future__ import annotations`.
 - Sort imports with `uv run ruff check --select I --fix src tests`.
 - Run `uv run mypy src tests` after making changes to verify type correctness.
