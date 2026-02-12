@@ -1,4 +1,6 @@
-from typing import TypedDict, cast
+from __future__ import annotations
+
+from typing import Any, TypedDict, cast
 
 import numpy as np
 import pytest
@@ -31,15 +33,23 @@ class ContentsKwargs(TypedDict, total=False):
     max_depth: int
 
 
-def contents_kwargs() -> st.SearchStrategy[st_ak.Opts[ContentsKwargs]]:
+@st.composite
+def contents_kwargs(
+    draw: st.DrawFn,
+    chain: st_ak.OptsChain[Any] | None = None,
+) -> st_ak.OptsChain[ContentsKwargs]:
     '''Strategy for options for `contents()` strategy.'''
-    return (
+    if chain is None:
+        chain = st_ak.OptsChain({})
+    st_dtypes = chain.register(st_ak.supported_dtypes())
+
+    kwargs = draw(
         st.fixed_dictionaries(
             {},
             optional={
                 'dtypes': st.one_of(
                     st.none(),
-                    st.just(st_ak.RecordDraws(st_ak.supported_dtypes())),
+                    st.just(st_dtypes),
                 ),
                 'max_size': st.integers(min_value=0, max_value=50),
                 'allow_nan': st.booleans(),
@@ -51,9 +61,9 @@ def contents_kwargs() -> st.SearchStrategy[st_ak.Opts[ContentsKwargs]]:
                 'max_depth': st.integers(min_value=0, max_value=5),
             },
         )
-        .map(lambda d: cast(ContentsKwargs, d))
-        .map(st_ak.Opts)
     )
+
+    return chain.extend(cast(ContentsKwargs, kwargs))
 
 
 @settings(max_examples=200)
