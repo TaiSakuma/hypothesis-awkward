@@ -2,9 +2,11 @@
 
 Reference implementations:
 
-- `tests/strategies/numpy/test_numpy_arrays.py` (simple kwargs)
+- `tests/strategies/numpy/test_numpy_arrays.py` (simple kwargs with `OptsChain`)
 - `tests/strategies/forms/test_numpy_forms.py` (strategy-valued kwargs with
-  `RecordDraws`)
+  `OptsChain` and `RecordDraws`)
+- `tests/strategies/contents/test_content.py` (kwargs delegation via
+  `OptsChain` chaining)
 
 ## 1. TypedDict for Strategy kwargs
 
@@ -114,32 +116,37 @@ Key techniques:
 - `flatmap` chains dependent strategies (e.g., max depends on min)
 - Mix required and optional in `st.fixed_dictionaries`
 
-### Strategy-valued kwargs with `st_ak.RecordDraws`
+### Strategy-valued kwargs with `st_ak.OptsChain`
 
 See `tests/strategies/forms/test_numpy_forms.py` for a full example.
 
 When a parameter accepts both a concrete value and a strategy (e.g.,
-`NumpyType | SearchStrategy[NumpyType] | None`), use `st_ak.RecordDraws` to
-wrap strategies so drawn values can be tracked in assertions.
+`NumpyType | SearchStrategy[NumpyType] | None`), use `st_ak.OptsChain` to
+register recorders via `chain.register()` so drawn values can be tracked in
+assertions.
 
-In the kwargs strategy, use `st.just(st_ak.RecordDraws(...))` to pass the
-recorder as a value:
-
-```python
-'type_': st.one_of(
-    st_ak.numpy_types(),                                 # concrete value
-    st.just(st_ak.RecordDraws(st_ak.numpy_types())),    # strategy (tracked)
-),
-```
-
-Wrap kwargs in `st_ak.Opts[K]` with `reset()` to clear recorders between draws:
+In the kwargs strategy, register recorders upfront, then use `st.just(recorder)`
+in `st.fixed_dictionaries`:
 
 ```python
-def numpy_forms_kwargs() -> st.SearchStrategy[st_ak.Opts[NumpyFormsKwargs]]:
-    return (
-        st.one_of(type_mode(), dtypes_mode())
-        .map(st_ak.Opts)
-    )
+@st.composite
+def numpy_forms_kwargs(
+    draw: st.DrawFn,
+    chain: st_ak.OptsChain[Any] | None = None,
+) -> st_ak.OptsChain[NumpyFormsKwargs]:
+    if chain is None:
+        chain = st_ak.OptsChain({})
+    st_type = chain.register(st_ak.numpy_types())
+
+    kwargs = draw(st.fixed_dictionaries(
+        {
+            'type_': st.one_of(
+                st_ak.numpy_types(),        # concrete value
+                st.just(st_type),           # strategy (tracked)
+            ),
+        },
+    ))
+    return chain.extend(cast(NumpyFormsKwargs, kwargs))
 ```
 
 In the test, call `reset()` before drawing and use `match` for assertions:
@@ -159,11 +166,11 @@ match type_:
 
 Key techniques:
 
-- `st_ak.RecordDraws` records values drawn from a wrapped strategy
-- `st.just(st_ak.RecordDraws(...))` passes the recorder itself as the kwarg
-  value
-- `st_ak.Opts[K]` is a generic wrapper; `reset()` clears recorded values before
-  each draw (avoids stale state)
+- `chain.register(strategy)` creates a `RecordDraws` wrapper and tracks it
+- `st.just(recorder)` passes the recorder itself as the kwarg value
+- `chain.extend(kwargs)` returns a new `OptsChain` with merged kwargs
+- `reset()` clears all registered recorders (avoids stale state)
+- `chain` parameter enables kwargs delegation between composable strategies
 - `match` / `case` distinguishes concrete values from `st_ak.RecordDraws` in
   assertions
 
@@ -175,8 +182,9 @@ Test that the strategy respects all its options:
 @settings(max_examples=200)
 @given(data=st.data())
 def test_numpy_arrays(data: st.DataObject) -> None:
-    kwargs = data.draw(numpy_arrays_kwargs(), label='kwargs')
-    result = data.draw(st_ak.numpy_arrays(**kwargs), label='result')
+    opts = data.draw(numpy_arrays_kwargs(), label='opts')
+    opts.reset()
+    result = data.draw(st_ak.numpy_arrays(**opts.kwargs), label='result')
     # Assert options were effective...
 ```
 

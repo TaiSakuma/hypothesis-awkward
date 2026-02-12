@@ -1,4 +1,4 @@
-from typing import TypedDict, cast
+from typing import Any, TypedDict, cast
 
 from hypothesis import Phase, find, given, settings
 from hypothesis import strategies as st
@@ -15,25 +15,29 @@ class ListOffsetArrayContentsKwargs(TypedDict, total=False):
     content: st.SearchStrategy[Content] | Content
 
 
-def list_offset_array_contents_kwargs() -> st.SearchStrategy[
-    st_ak.Opts[ListOffsetArrayContentsKwargs]
-]:
+@st.composite
+def list_offset_array_contents_kwargs(
+    draw: st.DrawFn,
+    chain: st_ak.OptsChain[Any] | None = None,
+) -> st_ak.OptsChain[ListOffsetArrayContentsKwargs]:
     '''Strategy for options for `list_offset_array_contents()` strategy.'''
-    return (
+    if chain is None:
+        chain = st_ak.OptsChain({})
+    st_content = chain.register(st_ak.contents.contents())
+
+    kwargs = draw(
         st.fixed_dictionaries(
             {},
             optional={
                 'content': st.one_of(
                     st_ak.contents.contents(),
-                    st.just(
-                        st_ak.RecordDraws(st_ak.contents.contents())
-                    ),
+                    st.just(st_content),
                 ),
             },
         )
-        .map(lambda d: cast(ListOffsetArrayContentsKwargs, d))
-        .map(st_ak.Opts[ListOffsetArrayContentsKwargs])
     )
+
+    return chain.extend(cast(ListOffsetArrayContentsKwargs, kwargs))
 
 
 @settings(max_examples=200)

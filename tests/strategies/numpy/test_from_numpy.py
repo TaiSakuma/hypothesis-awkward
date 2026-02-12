@@ -1,4 +1,4 @@
-from typing import TypedDict, cast
+from typing import Any, TypedDict, cast
 
 import numpy as np
 from hypothesis import Phase, find, given, settings
@@ -26,15 +26,23 @@ class FromNumpyKwargs(TypedDict, total=False):
     max_size: int
 
 
-def from_numpy_kwargs() -> st.SearchStrategy[st_ak.Opts[FromNumpyKwargs]]:
+@st.composite
+def from_numpy_kwargs(
+    draw: st.DrawFn,
+    chain: st_ak.OptsChain[Any] | None = None,
+) -> st_ak.OptsChain[FromNumpyKwargs]:
     '''Strategy for options for `from_numpy()` strategy.'''
-    return (
+    if chain is None:
+        chain = st_ak.OptsChain({})
+    st_dtypes = chain.register(st_ak.supported_dtypes())
+
+    kwargs = draw(
         st.fixed_dictionaries(
             {},
             optional={
                 'dtype': st.one_of(
                     st.none(),
-                    st.just(st_ak.RecordDraws(st_ak.supported_dtypes())),
+                    st.just(st_dtypes),
                     st_ak.supported_dtypes(),
                 ),
                 'allow_structured': st.booleans(),
@@ -43,9 +51,9 @@ def from_numpy_kwargs() -> st.SearchStrategy[st_ak.Opts[FromNumpyKwargs]]:
                 'max_size': st.integers(min_value=0, max_value=100),
             },
         )
-        .map(lambda d: cast(FromNumpyKwargs, d))
-        .map(st_ak.Opts)
     )
+
+    return chain.extend(cast(FromNumpyKwargs, kwargs))
 
 
 @settings(max_examples=200)

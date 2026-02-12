@@ -1,4 +1,4 @@
-from typing import TypedDict, cast
+from typing import Any, TypedDict, cast
 
 import numpy as np
 from hypothesis import Phase, find, given, settings
@@ -28,20 +28,29 @@ def _inner_shape_strategies() -> st.SearchStrategy[tuple[int, ...]]:
     ).map(tuple)
 
 
-def numpy_forms_kwargs() -> st.SearchStrategy[st_ak.Opts[NumpyFormsKwargs]]:
+@st.composite
+def numpy_forms_kwargs(
+    draw: st.DrawFn,
+    chain: st_ak.OptsChain[Any] | None = None,
+) -> st_ak.OptsChain[NumpyFormsKwargs]:
     '''Strategy for options for `numpy_forms()` strategy.
 
     Two modes:
     - type_ mode: type_ is set, other params omitted.
     - dtypes mode: type_ omitted, dtypes/allow_datetime/inner_shape/allow_inner_shape drawn.
     '''
+    if chain is None:
+        chain = st_ak.OptsChain({})
+    st_type = chain.register(st_ak.numpy_types())
+    st_dtypes = chain.register(st_ak.supported_dtypes())
+    st_inner_shape = chain.register(_inner_shape_strategies())
 
     def type_mode() -> st.SearchStrategy[NumpyFormsKwargs]:
         return st.fixed_dictionaries(
             {
                 'type_': st.one_of(
                     st_ak.numpy_types(),
-                    st.just(st_ak.RecordDraws(st_ak.numpy_types())),
+                    st.just(st_type),
                 ),
             },
         ).map(lambda d: cast(NumpyFormsKwargs, d))
@@ -52,7 +61,7 @@ def numpy_forms_kwargs() -> st.SearchStrategy[st_ak.Opts[NumpyFormsKwargs]]:
             optional={
                 'dtypes': st.one_of(
                     st.none(),
-                    st.just(st_ak.RecordDraws(st_ak.supported_dtypes())),
+                    st.just(st_dtypes),
                 ),
                 'allow_datetime': st.booleans(),
                 'inner_shape': st.one_of(
@@ -62,13 +71,14 @@ def numpy_forms_kwargs() -> st.SearchStrategy[st_ak.Opts[NumpyFormsKwargs]]:
                         min_size=0,
                         max_size=3,
                     ).map(tuple),
-                    st.just(st_ak.RecordDraws(_inner_shape_strategies())),
+                    st.just(st_inner_shape),
                 ),
                 'allow_inner_shape': st.booleans(),
             },
         ).map(lambda d: cast(NumpyFormsKwargs, d))
 
-    return st.one_of(type_mode(), dtypes_mode()).map(st_ak.Opts[NumpyFormsKwargs])
+    kwargs = draw(st.one_of(type_mode(), dtypes_mode()))
+    return chain.extend(kwargs)
 
 
 DATETIME_PRIMITIVES = frozenset(

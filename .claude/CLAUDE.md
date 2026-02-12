@@ -54,7 +54,7 @@ uv run ruff format src tests
   - `forms/` - (experimental) Strategies for Awkward Forms: `numpy_forms`
   - `types/` - (experimental) Strategies for Awkward Types: `numpy_types`
   - `misc/` - Utility strategies: `ranges`, `none_or`, `StMinMaxValuesFactory`,
-    `Opts`, `RecordDraws`
+    `OptsChain`, `RecordDraws`
 
 - **`util/`** - Internal utilities for dtype handling, safe comparisons, and
   array introspection

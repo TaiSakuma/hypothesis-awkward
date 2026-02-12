@@ -1,4 +1,4 @@
-from typing import TypedDict, cast
+from typing import Any, TypedDict, cast
 
 import numpy as np
 from hypothesis import Phase, find, given, settings
@@ -28,8 +28,12 @@ class NumpyArrayContentsKwargs(TypedDict, total=False):
 @st.composite
 def numpy_array_contents_kwargs(
     draw: st.DrawFn,
-) -> st_ak.Opts[NumpyArrayContentsKwargs]:
+    chain: st_ak.OptsChain[Any] | None = None,
+) -> st_ak.OptsChain[NumpyArrayContentsKwargs]:
     '''Strategy for options for `numpy_array_contents()` strategy.'''
+    if chain is None:
+        chain = st_ak.OptsChain({})
+    st_dtypes = chain.register(st_ak.supported_dtypes())
 
     min_size, max_size = draw(
         st_ak.ranges(min_start=0, max_start=DEFAULT_MAX_SIZE, max_end=100)
@@ -46,14 +50,14 @@ def numpy_array_contents_kwargs(
             optional={
                 'dtypes': st.one_of(
                     st.none(),
-                    st.just(st_ak.RecordDraws(st_ak.supported_dtypes())),
+                    st.just(st_dtypes),
                 ),
                 'allow_nan': st.booleans(),
             },
         )
     )
 
-    return st_ak.Opts(cast(NumpyArrayContentsKwargs, kwargs))
+    return chain.extend(cast(NumpyArrayContentsKwargs, kwargs))
 
 
 @settings(max_examples=200)

@@ -1,4 +1,4 @@
-from typing import TypedDict, cast
+from typing import Any, TypedDict, cast
 
 import numpy as np
 import pytest
@@ -25,8 +25,14 @@ class LeafContentsKwargs(TypedDict, total=False):
 
 
 @st.composite
-def leaf_contents_kwargs(draw: st.DrawFn) -> st_ak.Opts[LeafContentsKwargs]:
+def leaf_contents_kwargs(
+    draw: st.DrawFn,
+    chain: st_ak.OptsChain[Any] | None = None,
+) -> st_ak.OptsChain[LeafContentsKwargs]:
     '''Strategy for options for `leaf_contents()` strategy.'''
+    if chain is None:
+        chain = st_ak.OptsChain({})
+    st_dtypes = chain.register(st_ak.supported_dtypes())
 
     min_size, max_size = draw(
         st_ak.ranges(min_start=0, max_start=DEFAULT_MAX_SIZE, max_end=100)
@@ -43,7 +49,7 @@ def leaf_contents_kwargs(draw: st.DrawFn) -> st_ak.Opts[LeafContentsKwargs]:
             optional={
                 'dtypes': st.one_of(
                     st.none(),
-                    st.just(st_ak.RecordDraws(st_ak.supported_dtypes())),
+                    st.just(st_dtypes),
                 ),
                 'allow_nan': st.booleans(),
                 'allow_numpy': st.booleans(),
@@ -52,7 +58,7 @@ def leaf_contents_kwargs(draw: st.DrawFn) -> st_ak.Opts[LeafContentsKwargs]:
         )
     )
 
-    return st_ak.Opts(cast(LeafContentsKwargs, kwargs))
+    return chain.extend(cast(LeafContentsKwargs, kwargs))
 
 
 @settings(max_examples=200)

@@ -1,5 +1,5 @@
 import math
-from typing import TypedDict, cast
+from typing import Any, TypedDict, cast
 
 import numpy as np
 import pytest
@@ -34,8 +34,14 @@ class NumpyArraysKwargs(TypedDict, total=False):
 
 
 @st.composite
-def numpy_arrays_kwargs(draw: st.DrawFn) -> st_ak.Opts[NumpyArraysKwargs]:
+def numpy_arrays_kwargs(
+    draw: st.DrawFn,
+    chain: st_ak.OptsChain[Any] | None = None,
+) -> st_ak.OptsChain[NumpyArraysKwargs]:
     '''Strategy for options for `numpy_arrays()` strategy.'''
+    if chain is None:
+        chain = st_ak.OptsChain({})
+    st_dtypes = chain.register(st_ak.supported_dtypes())
 
     min_dims, max_dims = draw(st_ak.ranges(min_start=1, max_end=5))
     min_size, max_size = draw(
@@ -55,7 +61,7 @@ def numpy_arrays_kwargs(draw: st.DrawFn) -> st_ak.Opts[NumpyArraysKwargs]:
             optional={
                 'dtype': st.one_of(
                     st.none(),
-                    st.just(st_ak.RecordDraws(st_ak.supported_dtypes())),
+                    st.just(st_dtypes),
                     st_ak.supported_dtypes(),
                 ),
                 'allow_structured': st.booleans(),
@@ -64,7 +70,7 @@ def numpy_arrays_kwargs(draw: st.DrawFn) -> st_ak.Opts[NumpyArraysKwargs]:
         )
     )
 
-    return st_ak.Opts(cast(NumpyArraysKwargs, kwargs))
+    return chain.extend(cast(NumpyArraysKwargs, kwargs))
 
 
 @settings(max_examples=200)
