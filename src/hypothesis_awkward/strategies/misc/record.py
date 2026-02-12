@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Any, Generic, Mapping, Protocol, TypeVar
 
 from hypothesis import strategies as st
@@ -112,7 +110,7 @@ class OptsChain(Generic[K]):
         self._recorders.append(recorder)
         return recorder
 
-    def extend(self, extra: Mapping[str, Any]) -> OptsChain[Any]:
+    def extend(self, extra: Mapping[str, Any]) -> 'OptsChain[Any]':
         '''Return a new ``OptsChain`` with merged kwargs and a copy of recorders.'''
         return OptsChain(
             {**self._kwargs, **extra},
