@@ -1,26 +1,16 @@
-from typing import Any, TypedDict, cast
+from typing import Any, cast
 from unittest.mock import patch
 
-import numpy as np
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
 import awkward as ak
 import hypothesis_awkward.strategies as st_ak
+from tests.strategies.contents.test_content import ContentsKwargs
 
 
-class ArraysKwargs(TypedDict, total=False):
+class ArraysKwargs(ContentsKwargs, total=False):
     '''Options for `arrays()` strategy.'''
-
-    dtypes: st.SearchStrategy[np.dtype] | None
-    max_size: int
-    allow_nan: bool
-    allow_numpy: bool
-    allow_empty: bool
-    allow_regular: bool
-    allow_list_offset: bool
-    allow_list: bool
-    max_depth: int
 
 
 DEFAULTS: ArraysKwargs = {
