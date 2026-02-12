@@ -139,8 +139,7 @@ def iter_contents(a: ak.Array | Content, /) -> Iterator[Content]:
                 yield item
             case RecordArray():
                 yield item
-                for field in item.fields:
-                    stack.append(item[field])
+                stack.extend([item[f] for f in item.fields])
             case (
                 IndexedOptionArray()
                 | ListArray()
