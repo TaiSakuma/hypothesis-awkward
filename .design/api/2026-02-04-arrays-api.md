@@ -68,13 +68,18 @@ paths than the canonical representations produced by `from_type()`.
 
 ## API
 
+> **Note:** Signatures below omit `*` separators. See
+> [positional-keyword-convention](../notes/2026-02-12-positional-keyword-convention.md)
+> for the keyword-only convention adopted after this document was written.
+> `arrays()` falls in Group B (all keyword-only): `(draw, *, dtypes=None, ...)`.
+
 ### Main Strategy: `arrays()`
 
 ```python
 @st.composite
 def arrays(
     draw: st.DrawFn,
-
+    *,
     # --- Leaf data control ---
     dtypes: st.SearchStrategy[np.dtype] | None = None,
     allow_nan: bool = False,
