@@ -22,6 +22,8 @@ class LeafContentsKwargs(TypedDict, total=False):
     max_size: int
     allow_numpy: bool
     allow_empty: bool
+    allow_string: bool
+    allow_bytestring: bool
 
 
 @st.composite
@@ -54,6 +56,8 @@ def leaf_contents_kwargs(
                 'allow_nan': st.booleans(),
                 'allow_numpy': st.booleans(),
                 'allow_empty': st.booleans(),
+                'allow_string': st.booleans(),
+                'allow_bytestring': st.booleans(),
             },
         )
     )
@@ -70,9 +74,11 @@ def test_leaf_contents(data: st.DataObject) -> None:
 
     allow_numpy = opts.kwargs.get('allow_numpy', True)
     allow_empty = opts.kwargs.get('allow_empty', True)
+    allow_string = opts.kwargs.get('allow_string', True)
+    allow_bytestring = opts.kwargs.get('allow_bytestring', True)
 
-    # If both are False, expect ValueError
-    if not allow_numpy and not allow_empty:
+    # If all are False, expect ValueError
+    if not any((allow_numpy, allow_empty, allow_string, allow_bytestring)):
         with pytest.raises(
             ValueError, match='at least one leaf content type must be allowed'
         ):
@@ -81,43 +87,48 @@ def test_leaf_contents(data: st.DataObject) -> None:
 
     result = data.draw(st_ak.contents.leaf_contents(**opts.kwargs), label='result')
 
-    # Assert the result is always NumpyArray or EmptyArray
-    assert isinstance(result, (NumpyArray, EmptyArray))
+    is_numpy = isinstance(result, NumpyArray)
+    is_empty = isinstance(result, EmptyArray)
+    is_string = result.parameter('__array__') == 'string'
+    is_bytestring = result.parameter('__array__') == 'bytestring'
 
-    # Assert allow_numpy / allow_empty flags
+    assert any((is_numpy, is_empty, is_string, is_bytestring))
+
     if not allow_numpy:
-        assert isinstance(result, EmptyArray)
+        assert not is_numpy
     if not allow_empty:
-        assert isinstance(result, NumpyArray)
+        assert not is_empty
+    if not allow_string:
+        assert not is_string
+    if not allow_bytestring:
+        assert not is_bytestring
 
     dtypes = opts.kwargs.get('dtypes', None)
     allow_nan = opts.kwargs.get('allow_nan', False)
     min_size = opts.kwargs.get('min_size', 0)
     max_size = opts.kwargs.get('max_size', DEFAULT_MAX_SIZE)
 
-    if isinstance(result, NumpyArray):
-        # Assert size bounds
+    if is_empty:
+        assert len(result) == 0
+    else:
         assert sc(min_size) <= len(result) <= sc(max_size)
 
-        # Assert allow_nan
+    if is_numpy:
+        assert isinstance(result, NumpyArray)
         if not allow_nan:
             assert not any_nan_nat_in_numpy_array(result.data)
-
-        # Assert dtypes
         match dtypes:
             case st_ak.RecordDraws():
                 drawn_kinds = {d.kind for d in dtypes.drawn}
                 assert result.data.dtype.kind in drawn_kinds
-
-    if isinstance(result, EmptyArray):
-        assert len(result) == 0
 
 
 def test_draw_numpy_array() -> None:
     '''Assert that NumpyArray can be drawn by default.'''
     find(
         st_ak.contents.leaf_contents(),
-        lambda c: isinstance(c, NumpyArray),
+        lambda c: isinstance(c, NumpyArray)
+        and c.parameter('__array__') not in ('string', 'bytestring'),
         settings=settings(phases=[Phase.generate]),
     )
 
@@ -131,27 +142,19 @@ def test_draw_empty_array() -> None:
     )
 
 
-def test_draw_empty_array_only() -> None:
-    '''Assert that with allow_numpy=False, only EmptyArray is drawn.'''
+def test_draw_string() -> None:
+    '''Assert that string content can be drawn by default.'''
     find(
-        st_ak.contents.leaf_contents(allow_numpy=False),
-        lambda c: isinstance(c, EmptyArray),
+        st_ak.contents.leaf_contents(),
+        lambda c: c.parameter('__array__') == 'string',
         settings=settings(phases=[Phase.generate]),
     )
 
 
-def test_draw_numpy_array_only() -> None:
-    '''Assert that with allow_empty=False, only NumpyArray is drawn.'''
+def test_draw_bytestring() -> None:
+    '''Assert that bytestring content can be drawn by default.'''
     find(
-        st_ak.contents.leaf_contents(allow_empty=False),
-        lambda c: isinstance(c, NumpyArray),
+        st_ak.contents.leaf_contents(),
+        lambda c: c.parameter('__array__') == 'bytestring',
         settings=settings(phases=[Phase.generate]),
     )
-
-
-@settings(max_examples=200)
-@given(data=st.data())
-def test_no_empty_when_min_size_positive(data: st.DataObject) -> None:
-    '''Assert that EmptyArray is never drawn when min_size > 0.'''
-    result = data.draw(st_ak.contents.leaf_contents(min_size=1), label='result')
-    assert isinstance(result, NumpyArray)
