@@ -650,6 +650,8 @@ Accept `np.dtype | st.SearchStrategy[np.dtype] | None` as in `numpy_arrays()`.
 2. Add option type support (`allow_option`) -- `IndexedOptionArray`,
    `ByteMaskedArray`, `BitMaskedArray`, `UnmaskedArray`
 3. Add `UnionArray` support (`allow_union`)
-4. Add string/bytestring support (`allow_string`)
+4. Add string/bytestring support (`allow_string`, `allow_bytestring`) — see
+   [string-bytestring-api](./../api/2026-02-13-string-bytestring-api.md) for
+   the proposed design
 5. Implement content nesting constraint enforcement
 6. Consider connecting `type`/`form` parameters

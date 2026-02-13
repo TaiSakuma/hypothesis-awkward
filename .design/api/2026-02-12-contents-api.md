@@ -639,6 +639,8 @@ values.
 2. Add option type support (`indexed_option_array_contents()`,
    `byte_masked_array_contents()`, etc.)
 3. Add `UnionArray` support (`union_array_contents()`)
-4. Add string/bytestring support
+4. Add string/bytestring support — see
+   [string-bytestring-api](./2026-02-13-string-bytestring-api.md) for the
+   proposed design
 5. Consider exposing `MAX_REGULAR_SIZE` / `MAX_LIST_LENGTH` as parameters
 6. Consider adding `min_size` to `contents()`
