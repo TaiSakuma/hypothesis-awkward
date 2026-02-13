@@ -94,20 +94,21 @@ array=<Array [0] type='1 * int16'>
 array=<Array [-9223372036854724544 milliseconds] type='1 * timedelta64[ms]'>
 array=<Array [[9.01e+15+infj], [-6.1e-05+1.23e+176j]] type='2 * 1 * complex128'>
 array=<Array [[], [], [], []] type='4 * var * 2 * timedelta64[W]'>
-array=<Array [[[-30660], []]] type='1 * 2 * var * int16'>
-array=<Array [[[], [[], []], [], []]] type='1 * 4 * var * var * 1 * var * uint32'>
+array=<Array ['', "e\U00034a9e'"] type='2 * string'>
+array=<Array [[], ['char']] type='2 * var * string'>
+array=<Array [[b'\xd7']] type='1 * var * bytes'>
+array=<Array [[[b'6'], [b'\xe6sW\xbf'], []]] type='1 * 3 * var * bytes'>
 array=<Array [[[], []], [[]], [], []] type='5 * var * var * 4 * unknown'>
 array=<Array [] type='0 * unknown'>
 array=<Array [[], [], [], [], []] type='5 * var * unknown'>
 array=<Array [[[]], [[]], [[]]] type='3 * 1 * 0 * unknown'>
-array=<Array [[]] type='1 * var * 5 * unknown'>
 array=<Array [[[], []]] type='1 * var * var * var * timedelta64[ms]'>
 array=<Array [[[[[[]]]]], [[[[[]]]]]] type='2 * 1 * 1 * 1 * 1 * var * unknown'>
 ```
 
-The current version generates arrays with `NumpyArray` or `EmptyArray` as leaf
-contents that can be nested multiple levels deep in `RegularArray`,
-`ListOffsetArray`, and `ListArray` lists.
+The current version generates arrays with `NumpyArray`, `EmptyArray`, string,
+and bytestring as leaf contents that can be nested multiple levels deep in
+`RegularArray`, `ListOffsetArray`, and `ListArray` lists.
 
 ### The API of `arrays()`
 
@@ -119,6 +120,8 @@ def arrays(
     allow_nan: bool = False,
     allow_numpy: bool = True,
     allow_empty: bool = True,
+    allow_string: bool = True,
+    allow_bytestring: bool = True,
     allow_regular: bool = True,
     allow_list_offset: bool = True,
     allow_list: bool = True,
@@ -128,11 +131,13 @@ def arrays(
 
 | Parameter | Description |
 | --- | --- |
-| `dtypes` | A strategy for NumPy scalar dtypes used in `NumpyArray`. If `None`, the default strategy that generates any scalar dtype supported by Awkward Array is used. |
-| `max_size` | Maximum total number of scalar values in the generated array. |
+| `dtypes` | A strategy for NumPy scalar dtypes used in `NumpyArray`. If `None`, the default strategy that generates any scalar dtype supported by Awkward Array is used. Does not affect string or bytestring content. |
+| `max_size` | Maximum total number of elements in the generated array. Each numerical value counts as one. Each string and bytestring (not character or byte) counts as one. |
 | `allow_nan` | No `NaN`/`NaT` values are generated if `False`. |
 | `allow_numpy` | No `NumpyArray` is generated if `False`. |
 | `allow_empty` | No `EmptyArray` is generated if `False`. |
+| `allow_string` | No string content is generated if `False`. |
+| `allow_bytestring` | No bytestring content is generated if `False`. |
 | `allow_regular` | No `RegularArray` is generated if `False`. |
 | `allow_list_offset` | No `ListOffsetArray` is generated if `False`. |
 | `allow_list` | No `ListArray` is generated if `False`. |
