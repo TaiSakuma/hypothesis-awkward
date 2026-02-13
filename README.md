@@ -136,12 +136,12 @@ def arrays(
 | `allow_nan` | No `NaN`/`NaT` values are generated if `False`. |
 | `allow_numpy` | No `NumpyArray` is generated if `False`. |
 | `allow_empty` | No `EmptyArray` is generated if `False`. |
-| `allow_string` | No string content is generated if `False`. |
-| `allow_bytestring` | No bytestring content is generated if `False`. |
+| `allow_string` | No string content is generated if `False`. Each string (not character) counts toward `max_size`. String layers do not count toward `max_depth`. Unaffected by `dtypes` and `allow_nan`. |
+| `allow_bytestring` | No bytestring content is generated if `False`. Each bytestring (not byte) counts toward `max_size`. Bytestring layers do not count toward `max_depth`. Unaffected by `dtypes` and `allow_nan`. |
 | `allow_regular` | No `RegularArray` is generated if `False`. |
 | `allow_list_offset` | No `ListOffsetArray` is generated if `False`. |
 | `allow_list` | No `ListArray` is generated if `False`. |
-| `max_depth` | Maximum depth of nested arrays. |
+| `max_depth` | Maximum nesting depth. Each `RegularArray`, `ListOffsetArray`, and `ListArray` layer adds one level, excluding those that form string or bytestring content. |
 
 ## Other strategies
 
