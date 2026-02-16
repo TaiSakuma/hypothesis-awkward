@@ -2,44 +2,84 @@
 
 Reference implementations:
 
-- `tests/strategies/numpy/test_numpy_arrays.py` (simple kwargs with `OptsChain`)
-- `tests/strategies/forms/test_numpy_forms.py` (strategy-valued kwargs with
-  `OptsChain` and `RecordDraws`)
-- `tests/strategies/contents/test_content.py` (kwargs delegation via
-  `OptsChain` chaining)
+- `tests/strategies/contents/test_content.py` (base `OptsChain` pattern, all
+  optional kwargs)
+- `tests/strategies/numpy/test_numpy_arrays.py` (min/max pairs with `ranges()`)
+- `tests/strategies/forms/test_numpy_forms.py` (mode selection for
+  strategy-valued kwargs)
+- `tests/strategies/misc/test_ranges.py` (dependent kwargs without `OptsChain`)
 
 ## 1. TypedDict for Strategy kwargs
 
 Define a `TypedDict` that mirrors the strategy's parameters:
 
 ```python
-class NumpyArraysKwargs(TypedDict, total=False):
-    '''Options for `numpy_arrays()` strategy.'''
-    dtype: np.dtype | st.SearchStrategy[np.dtype] | None
-    allow_structured: bool
-    allow_nan: bool
+class ContentsKwargs(TypedDict, total=False):
+    '''Options for `contents()` strategy.'''
+
+    dtypes: st.SearchStrategy[np.dtype] | None
     max_size: int
+    allow_nan: bool
+    allow_numpy: bool
+    allow_empty: bool
+    allow_string: bool
+    allow_bytestring: bool
+    allow_regular: bool
+    allow_list_offset: bool
+    allow_list: bool
+    max_depth: int
 ```
 
 ## 2. Strategy for kwargs
 
-### Simple case: all optional, independent kwargs
+### Base pattern with `OptsChain`
 
-Use `st.fixed_dictionaries` with `optional`:
+All kwargs strategies use `@st.composite` returning `st_ak.OptsChain[MyKwargs]`.
+The `chain` parameter enables kwargs delegation between composable strategies.
 
 ```python
-def numpy_arrays_kwargs() -> st.SearchStrategy[NumpyArraysKwargs]:
-    '''Strategy for options for `numpy_arrays()` strategy.'''
-    return st.fixed_dictionaries(
-        {},
-        optional={
-            'dtype': st.one_of(st.none(), st_ak.supported_dtypes()),
-            'allow_structured': st.booleans(),
-            'allow_nan': st.booleans(),
-            'max_size': st.integers(min_value=0, max_value=100),
-        },
-    ).map(lambda d: cast(NumpyArraysKwargs, d))
+@st.composite
+def contents_kwargs(
+    draw: st.DrawFn,
+    chain: st_ak.OptsChain[Any] | None = None,
+) -> st_ak.OptsChain[ContentsKwargs]:
+    '''Strategy for options for `contents()` strategy.'''
+    if chain is None:
+        chain = st_ak.OptsChain({})
+    st_dtypes = chain.register(st_ak.supported_dtypes())
+
+    kwargs = draw(
+        st.fixed_dictionaries(
+            {},
+            optional={
+                'dtypes': st.one_of(
+                    st.none(),
+                    st.just(st_dtypes),
+                ),
+                'max_size': st.integers(min_value=0, max_value=50),
+                'allow_nan': st.booleans(),
+                'allow_numpy': st.booleans(),
+                'allow_empty': st.booleans(),
+                'allow_string': st.booleans(),
+                'allow_bytestring': st.booleans(),
+                'allow_regular': st.booleans(),
+                'allow_list_offset': st.booleans(),
+                'allow_list': st.booleans(),
+                'max_depth': st.integers(min_value=0, max_value=5),
+            },
+        )
+    )
+
+    return chain.extend(cast(ContentsKwargs, kwargs))
 ```
+
+Key techniques:
+
+- `@st.composite` with `chain` parameter for composability
+- `chain.register(strategy)` creates a `RecordDraws` wrapper that tracks drawn
+  values; pass it via `st.just(recorder)` as a strategy-valued kwarg
+- `chain.extend(kwargs)` returns a new `OptsChain` with merged kwargs
+- Use `st.fixed_dictionaries` with `optional` for independently drawn kwargs
 
 ### Min/max pairs with `st_ak.ranges()`
 
@@ -47,28 +87,33 @@ Use `st_ak.ranges()` to generate `(min, max)` pairs where `min <= max` and
 either may be `None`:
 
 ```python
-min_size_each, max_size_each = draw(st_ak.ranges(
-    st.integers, min_start=0, max_start=10, max_end=50
-))
+min_size, max_size = draw(
+    st_ak.ranges(min_start=0, max_end=100, max_start=DEFAULT_MAX_SIZE)
+)
 ```
 
 Include non-`None` values as required keys in `st.fixed_dictionaries`:
 
 ```python
 drawn = (
-    ('min_size_each', min_size_each),
-    ('max_size_each', max_size_each),
+    ('min_size', min_size),
+    ('max_size', max_size),
 )
 
-return draw(st.fixed_dictionaries(
-    {k: st.just(v) for k, v in drawn if v is not None},
-    optional={...},
-).map(lambda d: cast(MyKwargs, d)))
+kwargs = draw(
+    st.fixed_dictionaries(
+        {k: st.just(v) for k, v in drawn if v is not None},
+        optional={...},
+    )
+)
+
+return chain.extend(cast(MyKwargs, kwargs))
 ```
 
-See `tests/util/test_draw.py` for a full example.
+See `tests/strategies/numpy/test_numpy_arrays.py` and
+`tests/util/test_draw.py` for full examples.
 
-### Complex case: dependent kwargs
+### Dependent kwargs (without `OptsChain`)
 
 See `tests/strategies/misc/test_ranges.py` for a full example.
 
@@ -116,17 +161,12 @@ Key techniques:
 - `flatmap` chains dependent strategies (e.g., max depends on min)
 - Mix required and optional in `st.fixed_dictionaries`
 
-### Strategy-valued kwargs with `st_ak.OptsChain`
+### Mode selection for strategy-valued kwargs
 
 See `tests/strategies/forms/test_numpy_forms.py` for a full example.
 
-When a parameter accepts both a concrete value and a strategy (e.g.,
-`NumpyType | SearchStrategy[NumpyType] | None`), use `st_ak.OptsChain` to
-register recorders via `chain.register()` so drawn values can be tracked in
-assertions.
-
-In the kwargs strategy, register recorders upfront, then use `st.just(recorder)`
-in `st.fixed_dictionaries`:
+When a strategy has mutually exclusive parameter groups (e.g., `type_` mode vs
+`dtypes` mode), define mode functions selected via `st.one_of`:
 
 ```python
 @st.composite
@@ -137,16 +177,31 @@ def numpy_forms_kwargs(
     if chain is None:
         chain = st_ak.OptsChain({})
     st_type = chain.register(st_ak.numpy_types())
+    st_dtypes = chain.register(st_ak.supported_dtypes())
+    st_inner_shape = chain.register(_inner_shape_strategies())
 
-    kwargs = draw(st.fixed_dictionaries(
-        {
-            'type_': st.one_of(
-                st_ak.numpy_types(),        # concrete value
-                st.just(st_type),           # strategy (tracked)
-            ),
-        },
-    ))
-    return chain.extend(cast(NumpyFormsKwargs, kwargs))
+    def type_mode() -> st.SearchStrategy[NumpyFormsKwargs]:
+        return st.fixed_dictionaries(
+            {
+                'type_': st.one_of(
+                    st_ak.numpy_types(),        # concrete value
+                    st.just(st_type),           # strategy (tracked)
+                ),
+            },
+        ).map(lambda d: cast(NumpyFormsKwargs, d))
+
+    def dtypes_mode() -> st.SearchStrategy[NumpyFormsKwargs]:
+        return st.fixed_dictionaries(
+            {},
+            optional={
+                'dtypes': st.one_of(st.none(), st.just(st_dtypes)),
+                'allow_datetime': st.booleans(),
+                ...
+            },
+        ).map(lambda d: cast(NumpyFormsKwargs, d))
+
+    kwargs = draw(st.one_of(type_mode(), dtypes_mode()))
+    return chain.extend(kwargs)
 ```
 
 In the test, call `reset()` before drawing and use `match` for assertions:
@@ -166,11 +221,11 @@ match type_:
 
 Key techniques:
 
-- `chain.register(strategy)` creates a `RecordDraws` wrapper and tracks it
-- `st.just(recorder)` passes the recorder itself as the kwarg value
-- `chain.extend(kwargs)` returns a new `OptsChain` with merged kwargs
-- `reset()` clears all registered recorders (avoids stale state)
-- `chain` parameter enables kwargs delegation between composable strategies
+- Register multiple recorders for different strategy-valued parameters
+- `st.one_of(type_mode(), dtypes_mode())` selects between mutually exclusive
+  parameter groups
+- `reset()` clears all registered recorders before each draw (avoids stale
+  state)
 - `match` / `case` distinguishes concrete values from `st_ak.RecordDraws` in
   assertions
 
@@ -184,7 +239,7 @@ Test that the strategy respects all its options:
 def test_numpy_arrays(data: st.DataObject) -> None:
     opts = data.draw(numpy_arrays_kwargs(), label='opts')
     opts.reset()
-    result = data.draw(st_ak.numpy_arrays(**opts.kwargs), label='result')
+    n = data.draw(st_ak.numpy_arrays(**opts.kwargs), label='n')
     # Assert options were effective...
 ```
 
