@@ -49,12 +49,12 @@ def test_arrays(data: st.DataObject) -> None:
     drawn_layout: ak.contents.Content | None = None
     raised_exc: Exception | None = None
 
-    def tracking_contents(*a: Any, **kw: Any) -> st.SearchStrategy[ak.contents.Content]:
+    def wrap_contents(*a: Any, **kw: Any) -> st.SearchStrategy[ak.contents.Content]:
         nonlocal drawn_layout, raised_exc
         strategy = st_ak.contents.contents(*a, **kw)
 
         @st.composite
-        def wrapped(draw_inner: st.DrawFn) -> ak.contents.Content:
+        def _draw(draw_inner: st.DrawFn) -> ak.contents.Content:
             nonlocal drawn_layout, raised_exc
             try:
                 content = draw_inner(strategy)
@@ -64,10 +64,10 @@ def test_arrays(data: st.DataObject) -> None:
             drawn_layout = content
             return content
 
-        return wrapped()
+        return _draw()
 
     mock_st_ak = Mock(wraps=st_ak)
-    mock_st_ak.contents.contents = Mock(side_effect=tracking_contents)
+    mock_st_ak.contents.contents = Mock(side_effect=wrap_contents)
 
     with patch.object(array_module, 'st_ak', mock_st_ak):
         try:
