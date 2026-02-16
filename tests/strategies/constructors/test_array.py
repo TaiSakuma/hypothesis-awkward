@@ -1,11 +1,12 @@
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
 import awkward as ak
 import hypothesis_awkward.strategies as st_ak
+from hypothesis_awkward.strategies.constructors import array_ as array_module
 from tests.strategies.contents.test_content import ContentsKwargs, contents_kwargs
 
 
@@ -45,13 +46,12 @@ def test_arrays(data: st.DataObject) -> None:
     opts.reset()
     kwargs = opts.kwargs
 
-    real_contents = st_ak.contents.contents
     drawn_layout: ak.contents.Content | None = None
     raised_exc: Exception | None = None
 
     def tracking_contents(*a: Any, **kw: Any) -> st.SearchStrategy[ak.contents.Content]:
         nonlocal drawn_layout, raised_exc
-        strategy = real_contents(*a, **kw)
+        strategy = st_ak.contents.contents(*a, **kw)
 
         @st.composite
         def wrapped(draw_inner: st.DrawFn) -> ak.contents.Content:
@@ -66,9 +66,10 @@ def test_arrays(data: st.DataObject) -> None:
 
         return wrapped()
 
-    with patch.object(
-        st_ak.contents, 'contents', side_effect=tracking_contents
-    ) as mock:
+    mock_st_ak = Mock(wraps=st_ak)
+    mock_st_ak.contents.contents = Mock(side_effect=tracking_contents)
+
+    with patch.object(array_module, 'st_ak', mock_st_ak):
         try:
             a = data.draw(st_ak.constructors.arrays(**kwargs), label='a')
         except Exception as e:
@@ -78,4 +79,4 @@ def test_arrays(data: st.DataObject) -> None:
             assert isinstance(a, ak.Array)
             assert a.layout is drawn_layout
 
-    mock.assert_called_once_with(**{**DEFAULTS, **kwargs})
+    mock_st_ak.contents.contents.assert_called_once_with(**{**DEFAULTS, **kwargs})
