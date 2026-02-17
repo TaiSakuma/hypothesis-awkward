@@ -9,7 +9,7 @@ from awkward.contents import Content
 from hypothesis_awkward.strategies.contents.leaf import leaf_contents
 from hypothesis_awkward.util.draw import CountdownDrawer
 
-_NestingFn = Callable[[st.SearchStrategy[Content]], st.SearchStrategy[Content]]
+_WrapperFn = Callable[[st.SearchStrategy[Content]], st.SearchStrategy[Content]]
 
 
 @st.composite
@@ -30,9 +30,11 @@ def contents(
 ) -> Content:
     '''Strategy for Awkward Array content layouts.
 
-    Builds content layouts by drawing from NumpyArray, EmptyArray,
-    string, and bytestring, then optionally wrapping in one or more
-    layers of RegularArray, ListOffsetArray, and ListArray.
+    Builds content layouts by recursively constructing a tree of content
+    nodes. At each level, a coin flip decides whether to go deeper or
+    produce a leaf. Leaf types include NumpyArray, EmptyArray, string,
+    and bytestring. Wrapper types include RegularArray, ListOffsetArray,
+    and ListArray.
 
     Parameters
     ----------
@@ -71,9 +73,10 @@ def contents(
     allow_list
         No ``ListArray`` is generated if ``False``.
     max_depth
-        Maximum nesting depth. Each RegularArray, ListOffsetArray, and
-        ListArray layer adds one level, excluding those that form
-        string or bytestring content.
+        Maximum nesting depth. At each level below this limit, a coin flip
+        decides whether to descend further or produce a leaf. Each
+        RegularArray, ListOffsetArray, and ListArray layer adds one level,
+        excluding those that form string or bytestring content.
 
     Examples
     --------
@@ -82,13 +85,13 @@ def contents(
     True
 
     '''
-    nesting_fns: list[_NestingFn] = []
+    wrappers: dict[str, _WrapperFn] = {}
     if allow_regular:
-        nesting_fns.append(st_ak.contents.regular_array_contents)
+        wrappers['regular'] = st_ak.contents.regular_array_contents
     if allow_list_offset:
-        nesting_fns.append(st_ak.contents.list_offset_array_contents)
+        wrappers['list_offset'] = st_ak.contents.list_offset_array_contents
     if allow_list:
-        nesting_fns.append(st_ak.contents.list_array_contents)
+        wrappers['list'] = st_ak.contents.list_array_contents
 
     st_leaf = functools.partial(
         leaf_contents,
@@ -100,21 +103,22 @@ def contents(
         allow_bytestring=allow_bytestring,
     )
 
-    if not nesting_fns or max_size == 0:
+    if not wrappers or max_size == 0:
         return draw(st_leaf(min_size=0, max_size=max_size))
 
     draw_leaf = CountdownDrawer(draw, st_leaf, max_size_total=max_size)
-    content = draw_leaf()
-    if content is None:
+
+    def _leaf() -> Content:
+        content = draw_leaf()
+        if content is not None:
+            return content
         return draw(st_leaf(min_size=0, max_size=0))
 
-    # Draw nesting depth, then choose a nesting function for each level.
-    depth = draw(st.integers(min_value=0, max_value=max_depth))
-    nesting: list[_NestingFn] = [
-        draw(st.sampled_from(nesting_fns)) for _ in range(depth)
-    ]
+    def _build(depth: int) -> Content:
+        if depth >= max_depth or not draw(st.booleans()):
+            return _leaf()
+        child = _build(depth + 1)
+        node_type = draw(st.sampled_from(sorted(wrappers)))
+        return draw(wrappers[node_type](st.just(child)))
 
-    for fn in reversed(nesting):
-        content = draw(fn(st.just(content)))
-
-    return content
+    return _build(0)
