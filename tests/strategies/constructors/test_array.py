@@ -88,6 +88,9 @@ def test_arrays(data: st.DataObject) -> None:
         assert not is_virtual
     if not is_virtual:
         assert a.layout is spy.drawn_layout
+    else:
+        assert spy.drawn_layout is not None
+        assert a.layout.form == spy.drawn_layout.form
 
 
 class ContentsSpy:
