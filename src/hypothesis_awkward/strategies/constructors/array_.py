@@ -24,9 +24,9 @@ def arrays(
 ) -> ak.Array:
     '''Strategy for Awkward Arrays.
 
-    Builds arrays by drawing from NumpyArray, EmptyArray, string, and bytestring,
-    then optionally wrapping in one or more layers of RegularArray, ListOffsetArray,
-    and ListArray.
+    Builds arrays with NumpyArray, EmptyArray, string, and bytestring as leaf
+    contents that can be nested multiple levels deep in RegularArray,
+    ListOffsetArray, and ListArray lists. Arrays might be virtual.
 
     Parameters
     ----------
