@@ -1,7 +1,7 @@
 # Implementation: Bottom-Up Tree Builder for `contents()`
 
 **Date:** 2026-02-17
-**Status:** Proposed
+**Status:** Implemented
 **Author:** Claude (with developer collaboration)
 
 ## Overview
@@ -16,7 +16,7 @@ for background on `RecordArray`.
 
 ## Motivation
 
-The current `contents()` builds content as a linear chain:
+The previous `contents()` built content as a linear chain:
 
 ```text
 leaf → wrapper₁ → wrapper₂ → ... → wrapperₙ
@@ -27,7 +27,7 @@ Each wrapper has exactly one child. This cannot accommodate `RecordArray`
 
 ## Algorithm
 
-### Current: Linear Chain
+### Previous: Linear Chain
 
 ```python
 draw_leaf = CountdownDrawer(draw, st_leaf, max_size_total=max_size)
@@ -39,7 +39,7 @@ for fn in reversed(nesting):
 return content
 ```
 
-### New: Bottom-Up Tree Builder
+### Current: Bottom-Up Tree Builder
 
 A single recursive function `_build(depth)` that:
 
@@ -185,9 +185,9 @@ def contents(draw, *, ..., allow_record=True) -> Content:
     return _build(0)
 ```
 
-## Key Differences from Current Code
+## Key Differences from Previous Code
 
-| Aspect      | Current (linear chain)              | New (bottom-up tree)               |
+| Aspect      | Previous (linear chain)             | Current (bottom-up tree)           |
 | ----------- | ----------------------------------- | ---------------------------------- |
 | Structure   | `nesting_fns` list, apply in loop   | `_build(depth)` recursive function |
 | Depth       | Drawn upfront as integer            | Emergent from "deeper?" coin flips |

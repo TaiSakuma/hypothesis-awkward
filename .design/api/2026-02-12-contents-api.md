@@ -1,17 +1,17 @@
 # API Design: `contents/` Strategies
 
 **Date:** 2026-02-12
-**Status:** Implemented (initial version)
+**Status:** Implemented
 **Author:** Claude (with developer collaboration)
 
 ## Overview
 
-This document describes the API for the seven strategies in the `contents/`
+This document describes the API for the ten strategies in the `contents/`
 package, which generate `ak.contents.Content` layout objects for property-based
 testing. The `contents/` package is the layout generation layer: it produces
 Awkward Array internal structures (`NumpyArray`, `EmptyArray`, `RegularArray`,
-`ListOffsetArray`, `ListArray`) that the `constructors/` package wraps in
-`ak.Array`. See [arrays-api.md](./2026-02-04-arrays-api.md) for the
+`ListOffsetArray`, `ListArray`, `RecordArray`) that the `constructors/` package
+wraps in `ak.Array`. See [arrays-api.md](./2026-02-04-arrays-api.md) for the
 `arrays()` strategy that consumes `contents()`.
 
 ## Background
@@ -68,6 +68,7 @@ def contents(
     allow_regular: bool = True,
     allow_list_offset: bool = True,
     allow_list: bool = True,
+    allow_record: bool = True,
     max_depth: int = 5,
 ) -> Content:
 ```
@@ -108,11 +109,20 @@ def contents(
   `True`.
 
 - **`allow_list`** — Generate `ListArray` wrappers. Default: `True`. When all
-  three wrapper flags are `False`, only flat leaf arrays are generated.
+  wrapper flags are `False`, only flat leaf arrays are generated.
+
+- **`allow_record`** — Generate `RecordArray` nodes. Default: `True`.
+  `RecordArray` can appear at any depth and may have one or more children.
+  When enabled, the tree builder can produce multi-child nodes (named or
+  tuple records). See
+  [contents-tree-builder](../impl/2026-02-17-contents-tree-builder.md) for
+  algorithm details.
 
 - **`max_depth`** — Maximum nesting depth for structural wrappers. Default: `5`.
-  `max_depth=0` forces leaf-only arrays. The strategy draws a random depth
-  between 0 and `max_depth`, then randomly chooses a wrapper for each level.
+  `max_depth=0` forces leaf-only arrays. At each level, a coin flip decides
+  whether to go deeper or produce a leaf. See
+  [contents-tree-builder](../impl/2026-02-17-contents-tree-builder.md) for
+  the bottom-up tree builder algorithm.
 
 #### No `min_size`
 
@@ -341,8 +351,8 @@ randomly choosing wrappers.
 - `None` enables standalone use (wrapper draws its own content recursively)
 - `Strategy` enables composition (e.g., `contents()` passes `st.just(content)`)
 - Concrete `Content` enables deterministic wrapping in tests
-- `contents()` implements the composition loop: draw a leaf, draw a depth, draw
-  wrapper functions, apply in reverse order
+- `contents()` implements the composition via a bottom-up tree builder; see
+  [contents-tree-builder](../impl/2026-02-17-contents-tree-builder.md)
 
 ### 3. Polymorphic `content` Parameter (Three-Form Dispatch)
 
@@ -451,7 +461,8 @@ Contents layer:
 
   leaf_contents()  -->  contents()  ─┬─>  regular_array_contents()
                                      ├─>  list_offset_array_contents()
-                                     └─>  list_array_contents()
+                                     ├─>  list_array_contents()
+                                     └─>  record_array_contents()
 
 Constructors layer:
   contents()  -->  arrays()  -->  ak.Array
@@ -462,8 +473,8 @@ Constructors layer:
 ```text
 src/hypothesis_awkward/strategies/
 ├── contents/
-│   ├── __init__.py           # Re-exports all 9 strategies
-│   ├── content.py            # contents() — top-level recursive composition
+│   ├── __init__.py           # Re-exports all 10 strategies
+│   ├── content.py            # contents() — bottom-up tree builder
 │   ├── leaf.py               # leaf_contents() — leaf node selector
 │   ├── numpy_array.py        # numpy_array_contents()
 │   ├── empty_array.py        # empty_array_contents()
@@ -471,7 +482,8 @@ src/hypothesis_awkward/strategies/
 │   ├── list_offset_array.py  # list_offset_array_contents()
 │   ├── list_array.py         # list_array_contents()
 │   ├── string.py             # string_contents()
-│   └── bytestring.py         # bytestring_contents()
+│   ├── bytestring.py         # bytestring_contents()
+│   └── record_array.py       # record_array_contents()
 ├── constructors/
 │   ├── __init__.py           # Re-exports arrays()
 │   └── array_.py             # arrays() — thin wrapper around contents()
@@ -580,7 +592,8 @@ tests/strategies/contents/
 ├── test_list_offset_array.py # list_offset_array_contents()
 ├── test_list_array.py        # list_array_contents()
 ├── test_string.py            # string_contents()
-└── test_bytestring.py        # bytestring_contents()
+├── test_bytestring.py        # bytestring_contents()
+└── test_record_array.py      # record_array_contents()
 ```
 
 ## Alternatives Considered
@@ -642,10 +655,13 @@ values.
    minimum number of scalars. This would require `CountdownDrawer` to expose
    minimum guarantees to the public API.
 
-3. **How will `RecordArray` and option types affect the wrappers pattern?**
-   Records have multiple contents (one per field), not a single `content`.
-   Option types add masking layers. The composition loop in `contents()` may
-   need constraint tracking (e.g., option nodes cannot wrap other option nodes).
+3. ~~**How will `RecordArray` and option types affect the wrappers pattern?**~~
+   **Resolved.** `RecordArray` support motivated a refactoring from a linear
+   wrapper chain to a bottom-up tree builder. The `_build(depth)` recursive
+   function draws "deeper?" and "another edge?" coin flips to produce
+   multi-child nodes. See
+   [contents-tree-builder](../impl/2026-02-17-contents-tree-builder.md).
+   Option types remain an open question.
 
 ## Completed
 
@@ -661,7 +677,9 @@ values.
 
 ## Next Steps
 
-1. Add `RecordArray` support (`record_array_contents()`)
+1. ~~Add `RecordArray` support (`record_array_contents()`)~~ ✓ — see
+   [contents-tree-builder](../impl/2026-02-17-contents-tree-builder.md) and
+   [record-array-research](../research/2026-02-17-record-array-research.md)
 2. Add option type support (`indexed_option_array_contents()`,
    `byte_masked_array_contents()`, etc.)
 3. Add `UnionArray` support (`union_array_contents()`)

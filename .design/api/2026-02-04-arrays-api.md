@@ -1,7 +1,7 @@
 # API Design: `arrays()` Strategy
 
 **Date:** 2026-02-04
-**Status:** Implemented (initial version)
+**Status:** Implemented
 **Author:** Claude (with developer collaboration)
 
 ## Overview
@@ -9,8 +9,9 @@
 This document describes the API for the `arrays()` strategy, which generates
 `ak.Array` objects via direct Content constructors. The current implementation
 generates arrays with `NumpyArray` leaf contents nested in `RegularArray`,
-`ListOffsetArray`, and `ListArray` wrappers. The design anticipates progressive
-addition of `RecordArray`, option types, unions, and more in later iterations.
+`ListOffsetArray`, `ListArray`, and `RecordArray` wrappers. The design
+anticipates progressive addition of option types, unions, and more in later
+iterations.
 
 ## Background
 
@@ -97,9 +98,13 @@ def arrays(
     allow_regular: bool = True,
     allow_list_offset: bool = True,
     allow_list: bool = True,
+    allow_record: bool = True,
 
     # --- Nesting control ---
     max_depth: int = 5,
+
+    # --- Virtualization ---
+    allow_virtual: bool = True,
 ) -> ak.Array:
 ```
 
@@ -165,8 +170,13 @@ Control which structural Content node types are enabled.
 - When all three are `False`, only flat leaf arrays are generated (`NumpyArray`
   and/or `EmptyArray`).
 
-Future node type flags (not yet implemented): `allow_record`, `allow_option`,
-`allow_union`.
+- `allow_record`: Generate `RecordArray` nodes (named or tuple records with
+  one or more children). Default: `True`. See
+  [contents-tree-builder](../impl/2026-02-17-contents-tree-builder.md).
+- `allow_virtual`: Generate virtual (lazy) arrays. Default: `True`. Virtual
+  arrays show as `??` in the output and exercise lazy evaluation code paths.
+
+Future node type flags (not yet implemented): `allow_option`, `allow_union`.
 
 #### `max_depth`
 
@@ -174,8 +184,9 @@ Maximum nesting depth for structural wrappers.
 
 - Default: `5`.
 - `max_depth=0` forces leaf-only arrays (flat `NumpyArray`).
-- The strategy draws a random depth between 0 and `max_depth`, then applies that
-  many randomly chosen wrappers (`RegularArray`, `ListOffsetArray`, `ListArray`).
+- At each level, a coin flip decides whether to go deeper or produce a leaf.
+  See [contents-tree-builder](../impl/2026-02-17-contents-tree-builder.md) for
+  the bottom-up tree builder algorithm.
 
 ### Return Type
 
@@ -242,20 +253,24 @@ This keeps the `arrays()` parameter list focused on structural concerns. The
 The implementation is split across two packages:
 
 - **`contents/content.py`**: `contents()` strategy generates `ak.contents.Content`
-  layouts using a wrappers pattern
+  layouts using a bottom-up tree builder
 - **`constructors/array_.py`**: `arrays()` is a thin wrapper that calls
   `contents()` and wraps the result in `ak.Array`
 
 ### `contents()` Strategy
 
-The `contents()` strategy in `contents/content.py` uses a wrappers pattern:
+The `contents()` strategy in `contents/content.py` uses a bottom-up tree
+builder. A recursive `_build(depth)` function:
 
-1. **Leaf strategy**: `leaf_contents()` generates a `NumpyArray` or `EmptyArray`
-   Content with a scalar budget managed by `CountdownDrawer`
-2. A random depth (0 to `max_depth`) is drawn
-3. Nesting functions (`regular_array_contents`, `list_offset_array_contents`,
-   `list_array_contents`) are chosen randomly for each depth level
-4. Nesting functions are applied from innermost to outermost
+1. Draws "deeper?" or "bottom?" at each level (coin flip)
+2. At the bottom, draws a leaf via `leaf_contents()` with a shared scalar
+   budget managed by `CountdownDrawer`
+3. Going up, draws "another edge?" to decide whether to add sibling children
+4. Draws a node type constrained by child count (1 child: any wrapper or
+   RecordArray; 2+ children: RecordArray only)
+
+See [contents-tree-builder](../impl/2026-02-17-contents-tree-builder.md) for
+full algorithm details.
 
 ### `arrays()` Strategy
 
@@ -271,10 +286,10 @@ def arrays(draw, ...) -> ak.Array:
 
 ### Future Expansion
 
-When adding `RecordArray`, option types, and unions, the wrappers pattern will
-need to evolve to handle content nesting constraints (e.g., option nodes cannot
-wrap other option nodes). This may require adding constraint tracking to the
-wrappers pattern.
+`RecordArray` support has been added via the bottom-up tree builder (see
+[contents-tree-builder](../impl/2026-02-17-contents-tree-builder.md)). When
+adding option types and unions, the tree builder may need constraint tracking
+(e.g., option nodes cannot wrap other option nodes).
 
 ### Relationship to Existing Strategies
 
@@ -297,13 +312,16 @@ New:
 src/hypothesis_awkward/strategies/
 +-- contents/
 |   +-- __init__.py           # Re-exports contents() and individual content strategies
-|   +-- content.py            # contents() — top-level content layout strategy
+|   +-- content.py            # contents() — bottom-up tree builder
 |   +-- leaf.py               # leaf_contents() — leaf node strategy (NumpyArray | EmptyArray)
 |   +-- numpy_array.py        # numpy_array_contents()
 |   +-- empty_array.py        # empty_array_contents()
 |   +-- regular_array.py      # regular_array_contents()
 |   +-- list_offset_array.py  # list_offset_array_contents()
 |   +-- list_array.py         # list_array_contents()
+|   +-- string.py             # string_contents()
+|   +-- bytestring.py         # bytestring_contents()
+|   +-- record_array.py       # record_array_contents()
 +-- constructors/
 |   +-- __init__.py           # Re-exports arrays()
 |   +-- array_.py             # arrays() — delegates to contents.contents()
@@ -324,7 +342,7 @@ added, new content strategies will be added to `contents/`:
 ```text
 src/hypothesis_awkward/strategies/contents/
 +-- __init__.py
-+-- content.py                # Main contents() strategy (recursive composition)
++-- content.py                # Main contents() strategy (bottom-up tree builder)
 +-- leaf.py                   # leaf_contents() — leaf node strategy
 +-- numpy_array.py            # numpy_array_contents()
 +-- empty_array.py            # empty_array_contents()
@@ -333,7 +351,7 @@ src/hypothesis_awkward/strategies/contents/
 +-- list_array.py             # list_array_contents()
 +-- string.py                 # string_contents()
 +-- bytestring.py             # bytestring_contents()
-+-- record_array.py           # record_array_contents() (future)
++-- record_array.py           # record_array_contents()
 +-- option.py                 # option content strategies (future)
 +-- union_array.py            # union_array_contents() (future)
 ```
@@ -442,8 +460,9 @@ interface strict and revisit based on user feedback.
 ### 7. Add `allow_*` Flags Only When Implemented
 
 **Decision:** Only include `allow_*` flags for node types that are actually
-implemented. Currently: `allow_numpy`, `allow_empty` (leaf types),
-`allow_regular`, `allow_list_offset`, `allow_list` (nesting types).
+implemented. Currently: `allow_numpy`, `allow_empty`, `allow_string`,
+`allow_bytestring` (leaf types), `allow_regular`, `allow_list_offset`,
+`allow_list`, `allow_record` (nesting types), and `allow_virtual`.
 
 **Rationale:**
 
@@ -565,6 +584,7 @@ tests/strategies/contents/
 +-- test_list_array.py        # list_array_contents() tests
 +-- test_string.py            # string_contents() tests
 +-- test_bytestring.py        # bytestring_contents() tests
++-- test_record_array.py      # record_array_contents() tests
 
 tests/strategies/constructors/
 +-- __init__.py
@@ -655,7 +675,9 @@ Accept `np.dtype | st.SearchStrategy[np.dtype] | None` as in `numpy_arrays()`.
 
 ## Next Steps
 
-1. Add `RecordArray` support (`allow_record`)
+1. ~~Add `RecordArray` support (`allow_record`)~~ ✓ — see
+   [contents-tree-builder](../impl/2026-02-17-contents-tree-builder.md) and
+   [record-array-research](../research/2026-02-17-record-array-research.md)
 2. Add option type support (`allow_option`) -- `IndexedOptionArray`,
    `ByteMaskedArray`, `BitMaskedArray`, `UnmaskedArray`
 3. Add `UnionArray` support (`allow_union`)
