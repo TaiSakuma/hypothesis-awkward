@@ -93,8 +93,13 @@ def arrays(
         )
     )
     array = ak.Array(layout)
-    if not allow_virtual:
+    to_lazify = allow_virtual and draw(st.booleans())
+    if not to_lazify:
         return array
+    return _lazify(draw, array)
+
+
+def _lazify(draw: st.DrawFn, array: ak.Array) -> ak.Array:
     form, length, buffers = ak.to_buffers(array)
     data_keys = [k for k in buffers if k.endswith('-data')]
     if not data_keys:
