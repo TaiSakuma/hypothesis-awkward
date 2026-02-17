@@ -1,7 +1,7 @@
 # Pinned oldest supported versions of dependencies.
 # Used in GitHub Actions for testing compatibility.
 # Must be manually updated to align with `pyproject.toml`.
-awkward==2.8.0
+awkward==2.9.0
 pandas==2.3.0; python_version < '3.14'
 pandas==2.3.3; python_version >= '3.14'
 pyarrow==22.0.0
