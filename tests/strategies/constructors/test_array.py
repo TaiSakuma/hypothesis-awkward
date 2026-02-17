@@ -1,7 +1,7 @@
-from typing import Any
+from typing import Any, cast
 from unittest.mock import Mock, patch
 
-from hypothesis import given, settings
+from hypothesis import Phase, find, given, settings
 from hypothesis import strategies as st
 
 import awkward as ak
@@ -12,6 +12,8 @@ from tests.strategies.contents.test_content import ContentsKwargs, contents_kwar
 
 class ArraysKwargs(ContentsKwargs, total=False):
     '''Options for `arrays()` strategy.'''
+
+    allow_virtual: bool
 
 
 DEFAULTS = ArraysKwargs(
@@ -26,6 +28,7 @@ DEFAULTS = ArraysKwargs(
     allow_list_offset=True,
     allow_list=True,
     max_depth=5,
+    allow_virtual=True,
 )
 
 
@@ -35,7 +38,16 @@ def arrays_kwargs(
     chain: st_ak.OptsChain[Any] | None = None,
 ) -> st_ak.OptsChain[ArraysKwargs]:
     '''Strategy for options for `arrays()` strategy.'''
-    return draw(contents_kwargs(chain=chain))
+    opts = draw(contents_kwargs(chain=chain))
+    extra = draw(
+        st.fixed_dictionaries(
+            {},
+            optional={
+                'allow_virtual': st.booleans(),
+            },
+        )
+    )
+    return opts.extend(cast(ArraysKwargs, extra))
 
 
 @settings(max_examples=200)
@@ -52,17 +64,30 @@ def test_arrays(data: st.DataObject) -> None:
     mock_st_ak = Mock(wraps=st_ak)
     mock_st_ak.contents.contents = Mock(side_effect=spy.wrap_contents)
 
+    contents_keys = ContentsKwargs.__required_keys__ | ContentsKwargs.__optional_keys__
+    expected_contents_kwargs = {
+        k: v for k, v in {**DEFAULTS, **kwargs}.items() if k in contents_keys
+    }
+
     with patch.object(array_module, 'st_ak', mock_st_ak):
         try:
             a = data.draw(st_ak.constructors.arrays(**kwargs), label='a')
         except Exception as e:
             assert spy.raised_exc is not None
             assert e is spy.raised_exc
-        else:
-            assert isinstance(a, ak.Array)
-            assert a.layout is spy.drawn_layout
+            return
+        finally:
+            mock_st_ak.contents.contents.assert_called_once_with(
+                **expected_contents_kwargs
+            )
 
-    mock_st_ak.contents.contents.assert_called_once_with(**{**DEFAULTS, **kwargs})
+    assert isinstance(a, ak.Array)
+    is_virtual = not ak.to_layout(a).is_all_materialized
+    allow_virtual = kwargs.get('allow_virtual', DEFAULTS['allow_virtual'])
+    if not allow_virtual:
+        assert not is_virtual
+    if not is_virtual:
+        assert a.layout is spy.drawn_layout
 
 
 class ContentsSpy:
@@ -88,3 +113,12 @@ class ContentsSpy:
             return spy.drawn_layout
 
         return _draw()
+
+
+def test_draw_virtual() -> None:
+    '''Assert that virtual arrays can be drawn by default.'''
+    find(
+        st_ak.constructors.arrays(),
+        lambda a: not ak.to_layout(a).is_all_materialized,
+        settings=settings(phases=[Phase.generate]),
+    )

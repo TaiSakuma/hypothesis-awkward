@@ -18,7 +18,7 @@ from hypothesis_awkward.util.awkward import iter_leaf_contents
 def test_any_nan_nat_in_awkward_array(data: st.DataObject) -> None:
     '''Verify result matches element-by-element iteration.'''
     allow_nan = data.draw(st.booleans())
-    a = data.draw(st_ak.constructors.arrays(allow_nan=allow_nan))
+    a = data.draw(st_ak.constructors.arrays(allow_nan=allow_nan, allow_virtual=False))
     actual = any_nan_nat_in_awkward_array(a)
     if allow_nan:
         expected = _expected_any_nan_nat(a)
@@ -31,7 +31,7 @@ def test_any_nan_nat_in_awkward_array(data: st.DataObject) -> None:
 def test_any_nan_in_awkward_array(data: st.DataObject) -> None:
     '''Verify result matches element-by-element iteration.'''
     allow_nan = data.draw(st.booleans())
-    a = data.draw(st_ak.constructors.arrays(allow_nan=allow_nan))
+    a = data.draw(st_ak.constructors.arrays(allow_nan=allow_nan, allow_virtual=False))
     actual = any_nan_in_awkward_array(a)
     if allow_nan:
         expected = _expected_any_nan(a)
@@ -44,7 +44,7 @@ def test_any_nan_in_awkward_array(data: st.DataObject) -> None:
 def test_any_nat_in_awkward_array(data: st.DataObject) -> None:
     '''Verify result matches element-by-element iteration.'''
     allow_nan = data.draw(st.booleans())
-    a = data.draw(st_ak.constructors.arrays(allow_nan=allow_nan))
+    a = data.draw(st_ak.constructors.arrays(allow_nan=allow_nan, allow_virtual=False))
     actual = any_nat_in_awkward_array(a)
     if allow_nan:
         expected = _expected_any_nat(a)
@@ -56,7 +56,7 @@ def test_any_nat_in_awkward_array(data: st.DataObject) -> None:
 def test_draw_nan() -> None:
     '''Assert that arrays with NaN can be drawn.'''
     find(
-        st_ak.constructors.arrays(allow_nan=True),
+        st_ak.constructors.arrays(allow_nan=True, allow_virtual=False),
         _expected_any_nan,
         settings=settings(max_examples=10000, phases=[Phase.generate]),
     )
@@ -65,7 +65,7 @@ def test_draw_nan() -> None:
 def test_draw_nat() -> None:
     '''Assert that arrays with NaT can be drawn.'''
     find(
-        st_ak.constructors.arrays(allow_nan=True),
+        st_ak.constructors.arrays(allow_nan=True, allow_virtual=False),
         _expected_any_nat,
         settings=settings(max_examples=10000, phases=[Phase.generate]),
     )

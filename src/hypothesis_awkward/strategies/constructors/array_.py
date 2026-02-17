@@ -20,6 +20,7 @@ def arrays(
     allow_list_offset: bool = True,
     allow_list: bool = True,
     max_depth: int = 5,
+    allow_virtual: bool = True,
 ) -> ak.Array:
     '''Strategy for Awkward Arrays.
 
@@ -67,6 +68,11 @@ def arrays(
         Maximum nesting depth. Each RegularArray, ListOffsetArray, and
         ListArray layer adds one level, excluding those that form
         string or bytestring content.
+    allow_virtual
+        If ``True``, the generated array is sometimes lazified via
+        ``ak.to_buffers``/``ak.from_buffers`` with deferred buffers,
+        producing a virtual (unmaterialized) array. If ``False``, the
+        array is always eager.
 
     Examples
     --------
@@ -89,4 +95,17 @@ def arrays(
             max_depth=max_depth,
         )
     )
-    return ak.Array(layout)
+    array = ak.Array(layout)
+    if not allow_virtual:
+        return array
+    form, length, buffers = ak.to_buffers(array)
+    data_keys = [k for k in buffers if k.endswith('-data')]
+    if not data_keys:
+        return array
+    lazify = set(draw(st.sets(st.sampled_from(data_keys))))
+    if not lazify:
+        return array
+    virtual_buffers = {
+        k: (lambda v=v: v) if k in lazify else v for k, v in buffers.items()
+    }
+    return ak.from_buffers(form, length, virtual_buffers)
