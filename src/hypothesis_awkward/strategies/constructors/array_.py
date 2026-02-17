@@ -101,10 +101,9 @@ def arrays(
 
 def _lazify(draw: st.DrawFn, array: ak.Array) -> ak.Array:
     form, length, buffers = ak.to_buffers(array)
-    data_keys = [k for k in buffers if k.endswith('-data')]
-    if not data_keys:
+    if not buffers:
         return array
-    lazify = set(draw(st.sets(st.sampled_from(data_keys))))
+    lazify = set(draw(st.sets(st.sampled_from(list(buffers)))))
     if not lazify:
         return array
     virtual_buffers = {
