@@ -3,5 +3,5 @@
 # Monitored by Dependabot.
 awkward==2.9.0
 pandas==2.3.3; python_version < '3.11'
-pandas==3.0.0; python_version >= '3.11'
+pandas==3.0.1; python_version >= '3.11'
 pyarrow==23.0.1
