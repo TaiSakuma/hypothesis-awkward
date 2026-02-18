@@ -6,6 +6,7 @@ from hypothesis import strategies as st
 
 import hypothesis_awkward.strategies as st_ak
 from awkward.contents import Content, UnionArray
+from hypothesis_awkward.util import iter_contents
 
 DEFAULT_MAX_CONTENTS = 4
 
@@ -24,7 +25,8 @@ def _contents_list(
     '''Draw a list of 2..5 Content objects for testing.'''
     n = draw(st.integers(min_value=2, max_value=5))
     return [
-        draw(st_ak.contents.contents(max_size=5, max_depth=2)) for _ in range(n)
+        draw(st_ak.contents.contents(max_size=5, max_depth=2, allow_union=False))
+        for _ in range(n)
     ]
 
 
@@ -131,5 +133,15 @@ def test_draw_different_content_lengths() -> None:
     find(
         st_ak.contents.union_array_contents(),
         lambda u: len({len(c) for c in u.contents}) > 1,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
+
+
+def test_draw_from_contents() -> None:
+    '''Assert that UnionArray can be drawn from `contents()`.'''
+    find(
+        st_ak.contents.contents(max_size=20),
+        lambda c: isinstance(c, UnionArray)
+        or any(isinstance(n, UnionArray) for n in iter_contents(c)),
         settings=settings(phases=[Phase.generate], max_examples=2000),
     )

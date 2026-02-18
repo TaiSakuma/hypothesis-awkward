@@ -3,6 +3,7 @@ from hypothesis import strategies as st
 
 import awkward as ak
 import hypothesis_awkward.strategies as st_ak
+from awkward.forms import UnionForm
 
 
 @st.composite
@@ -20,6 +21,7 @@ def arrays(
     allow_list_offset: bool = True,
     allow_list: bool = True,
     allow_record: bool = True,
+    allow_union: bool = True,
     max_depth: int = 5,
     allow_virtual: bool = True,
 ) -> ak.Array:
@@ -27,7 +29,8 @@ def arrays(
 
     Builds arrays with NumpyArray, EmptyArray, string, and bytestring as leaf
     contents that can be nested multiple levels deep in RegularArray,
-    ListOffsetArray, and ListArray lists. Arrays might be virtual.
+    ListOffsetArray, ListArray, RecordArray, and UnionArray. Arrays might be
+    virtual.
 
     Parameters
     ----------
@@ -65,10 +68,14 @@ def arrays(
         No ``ListOffsetArray`` is generated if ``False``.
     allow_list
         No ``ListArray`` is generated if ``False``.
+    allow_record
+        No ``RecordArray`` is generated if ``False``.
+    allow_union
+        No ``UnionArray`` is generated if ``False``.
     max_depth
-        Maximum nesting depth. Each RegularArray, ListOffsetArray, and
-        ListArray layer adds one level, excluding those that form
-        string or bytestring content.
+        Maximum nesting depth. Each RegularArray, ListOffsetArray, ListArray,
+        RecordArray, and UnionArray layer adds one level, excluding those that
+        form string or bytestring content.
     allow_virtual
         No virtual arrays are generated if ``False``.
 
@@ -91,6 +98,7 @@ def arrays(
             allow_string=allow_string,
             allow_bytestring=allow_bytestring,
             allow_record=allow_record,
+            allow_union=allow_union,
             max_depth=max_depth,
         )
     )
@@ -105,10 +113,31 @@ def _lazify(draw: st.DrawFn, array: ak.Array) -> ak.Array:
     form, length, buffers = ak.to_buffers(array)
     if not buffers:
         return array
-    lazify = set(draw(st.sets(st.sampled_from(list(buffers)))))
+    # UnionArray eagerly accesses tags/index during construction,
+    # so these buffers cannot be made virtual.
+    no_lazify = _union_buffer_keys(form)
+    candidates = [k for k in buffers if k not in no_lazify]
+    if not candidates:
+        return array
+    lazify = set(draw(st.sets(st.sampled_from(candidates))))
     if not lazify:
         return array
     virtual_buffers = {
         k: (lambda v=v: v) if k in lazify else v for k, v in buffers.items()
     }
     return ak.from_buffers(form, length, virtual_buffers)
+
+
+def _union_buffer_keys(form: ak.forms.Form) -> set[str]:
+    '''Collect buffer keys for UnionArray tags and index.'''
+    keys: set[str] = set()
+    if isinstance(form, UnionForm):
+        fk = form.form_key
+        keys.add(f'{fk}-tags')
+        keys.add(f'{fk}-index')
+    if hasattr(form, 'contents'):
+        for child in form.contents:
+            keys |= _union_buffer_keys(child)
+    elif hasattr(form, 'content'):
+        keys |= _union_buffer_keys(form.content)
+    return keys

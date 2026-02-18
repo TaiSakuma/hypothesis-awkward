@@ -6,7 +6,8 @@ from hypothesis import strategies as st
 
 import awkward as ak
 import hypothesis_awkward.strategies as st_ak
-from awkward.contents import Content
+from awkward.contents import Content, UnionArray
+from hypothesis_awkward.util import iter_contents
 from tests.strategies.contents.test_content import ContentsKwargs, contents_kwargs
 
 
@@ -28,6 +29,7 @@ DEFAULTS = ArraysKwargs(
     allow_list_offset=True,
     allow_list=True,
     allow_record=True,
+    allow_union=True,
     max_depth=5,
     allow_virtual=True,
 )
@@ -125,4 +127,19 @@ def test_draw_virtual() -> None:
         st_ak.constructors.arrays(),
         lambda a: not ak.to_layout(a).is_all_materialized,
         settings=settings(phases=[Phase.generate]),
+    )
+
+
+def test_draw_virtual_union() -> None:
+    '''Assert that a virtual array containing a UnionArray can be drawn.'''
+
+    def _is_virtual_union(a: ak.Array) -> bool:
+        layout = ak.to_layout(a)
+        has_union = any(isinstance(n, UnionArray) for n in iter_contents(layout))
+        return has_union and not layout.is_all_materialized
+
+    find(
+        st_ak.constructors.arrays(max_size=20),
+        _is_virtual_union,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
     )

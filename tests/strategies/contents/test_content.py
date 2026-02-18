@@ -33,6 +33,7 @@ class ContentsKwargs(TypedDict, total=False):
     allow_list_offset: bool
     allow_list: bool
     allow_record: bool
+    allow_union: bool
     max_depth: int
 
 
@@ -64,6 +65,7 @@ def contents_kwargs(
                 'allow_list_offset': st.booleans(),
                 'allow_list': st.booleans(),
                 'allow_record': st.booleans(),
+                'allow_union': st.booleans(),
                 'max_depth': st.integers(min_value=0, max_value=5),
             },
         )
@@ -105,9 +107,10 @@ def test_contents(data: st.DataObject) -> None:
     allow_list_offset = opts.kwargs.get('allow_list_offset', True)
     allow_list = opts.kwargs.get('allow_list', True)
     allow_record = opts.kwargs.get('allow_record', True)
+    allow_union = opts.kwargs.get('allow_union', True)
     max_depth = opts.kwargs.get('max_depth', DEFAULT_MAX_DEPTH)
 
-    allow_any_nesting = any((allow_regular, allow_list_offset, allow_list, allow_record))
+    allow_any_nesting = any((allow_regular, allow_list_offset, allow_list, allow_record, allow_union))
     if not allow_any_nesting:
         assert _nesting_depth(c) == 0
 
@@ -128,6 +131,8 @@ def test_contents(data: st.DataObject) -> None:
         assert not _has_bytestring(c)
     if not allow_record:
         assert not _has_record(c)
+    if not allow_union:
+        assert not _has_union(c)
 
     # Dtype check via leaf arrays (works for both flat and nested layouts)
     match dtypes:
@@ -183,6 +188,8 @@ def _nesting_depth(c: ak.contents.Content) -> int:
         ak.contents.ListOffsetArray,
         ak.contents.ListArray,
     )
+    if isinstance(c, ak.contents.UnionArray):
+        return 1 + max(_nesting_depth(child) for child in c.contents)
     if isinstance(c, ak.contents.RecordArray):
         if not c.contents:
             return 1
@@ -236,3 +243,8 @@ def _has_bytestring(c: ak.contents.Content) -> bool:
 def _has_record(c: ak.contents.Content) -> bool:
     '''Check if the content contains any RecordArray node.'''
     return any(isinstance(n, ak.contents.RecordArray) for n in iter_contents(c))
+
+
+def _has_union(c: ak.contents.Content) -> bool:
+    '''Check if the content contains any UnionArray node.'''
+    return any(isinstance(n, ak.contents.UnionArray) for n in iter_contents(c))
