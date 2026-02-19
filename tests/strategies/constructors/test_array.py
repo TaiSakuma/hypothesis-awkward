@@ -101,9 +101,7 @@ def test_arrays(data: st.DataObject) -> None:
 def assert_all_buffers_virtual(a: ak.Array) -> None:
     '''Assert that all buffers that can remain virtual are not materialized.
 
-    ``ak.from_buffers`` eagerly materializes some buffers during construction
-    (e.g., ListArray starts/stops when a UnionArray is a descendant). These
-    appear as plain ``ndarray`` without ``is_materialized``. We skip those and
+    Some buffers may not have ``is_materialized``. We skip those and
     verify the rest.
     '''
     _form, _length, buffers = ak.to_buffers(a)
