@@ -16,6 +16,38 @@ def leaf_contents(
     allow_string: bool = True,
     allow_bytestring: bool = True,
 ) -> st.SearchStrategy[NumpyArray | EmptyArray | ListOffsetArray]:
+    '''Strategy for leaf content types.
+
+    Produces one of NumpyArray, EmptyArray, string, or bytestring content,
+    selected by ``st.one_of``.
+
+    Parameters
+    ----------
+    dtypes
+        A strategy for NumPy scalar dtypes used in ``NumpyArray``. If ``None``,
+        the default strategy that generates any scalar dtype supported by
+        Awkward Array is used. Does not affect string or bytestring content.
+    allow_nan
+        No ``NaN``/``NaT`` values are generated in ``NumpyArray`` if ``False``.
+    min_size
+        Minimum number of elements.
+    max_size
+        Maximum number of elements.
+    allow_numpy
+        No ``NumpyArray`` is generated if ``False``.
+    allow_empty
+        No ``EmptyArray`` is generated if ``False``.
+    allow_string
+        No string content is generated if ``False``.
+    allow_bytestring
+        No bytestring content is generated if ``False``.
+
+    Examples
+    --------
+    >>> c = leaf_contents().example()
+    >>> isinstance(c, (NumpyArray, EmptyArray, ListOffsetArray))
+    True
+    '''
     if not any((allow_numpy, allow_empty, allow_string, allow_bytestring)):
         raise ValueError('at least one leaf content type must be allowed')
 

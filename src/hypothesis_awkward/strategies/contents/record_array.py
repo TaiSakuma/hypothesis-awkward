@@ -14,7 +14,24 @@ def record_array_contents(
     max_fields: int = 5,
     allow_tuple: bool = True,
 ) -> Content:
-    '''Strategy for RecordArray Content from a list of child Contents.'''
+    '''Strategy for RecordArray Content from a list of child Contents.
+
+    Parameters
+    ----------
+    contents
+        Child contents. Can be a strategy for a list of Content, a concrete
+        list, or ``None`` to draw random children.
+    max_fields
+        Maximum number of fields when ``contents`` is ``None``.
+    allow_tuple
+        Allow tuple records (no field names) if ``True``.
+
+    Examples
+    --------
+    >>> c = record_array_contents().example()
+    >>> isinstance(c, Content)
+    True
+    '''
     match contents:
         case None:
             n = draw(st.integers(min_value=0, max_value=max_fields))

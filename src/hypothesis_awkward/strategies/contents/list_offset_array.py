@@ -13,7 +13,20 @@ def list_offset_array_contents(
     draw: st.DrawFn,
     content: st.SearchStrategy[Content] | Content | None = None,
 ) -> Content:
-    '''Strategy for ListOffsetArray Content wrapping child Content.'''
+    '''Strategy for ListOffsetArray Content wrapping child Content.
+
+    Parameters
+    ----------
+    content
+        Child content. Can be a strategy for Content, a concrete Content
+        instance, or ``None`` to draw from ``contents()``.
+
+    Examples
+    --------
+    >>> c = list_offset_array_contents().example()
+    >>> isinstance(c, Content)
+    True
+    '''
     match content:
         case None:
             content = draw(st_ak.contents.contents())

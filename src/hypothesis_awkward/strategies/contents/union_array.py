@@ -13,7 +13,22 @@ def union_array_contents(
     *,
     max_contents: int = 4,
 ) -> Content:
-    '''Strategy for UnionArray Content from a list of child Contents.'''
+    '''Strategy for UnionArray Content from a list of child Contents.
+
+    Parameters
+    ----------
+    contents
+        Child contents. Can be a strategy for a list of Content, a concrete
+        list, or ``None`` to draw random children.
+    max_contents
+        Maximum number of child contents when ``contents`` is ``None``.
+
+    Examples
+    --------
+    >>> c = union_array_contents().example()
+    >>> isinstance(c, Content)
+    True
+    '''
     match contents:
         case None:
             n = draw(st.integers(min_value=2, max_value=max_contents))

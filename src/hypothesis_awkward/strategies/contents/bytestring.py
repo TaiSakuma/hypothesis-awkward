@@ -12,7 +12,21 @@ def bytestring_contents(
     min_size: int = 0,
     max_size: int = 10,
 ) -> ListOffsetArray:
-    '''Strategy for ListOffsetArray bytestring content.'''
+    '''Strategy for ListOffsetArray bytestring content.
+
+    Parameters
+    ----------
+    min_size
+        Minimum number of bytestrings.
+    max_size
+        Maximum number of bytestrings.
+
+    Examples
+    --------
+    >>> c = bytestring_contents().example()
+    >>> isinstance(c, ListOffsetArray)
+    True
+    '''
     bytestrings = draw(st.lists(st.binary(), min_size=min_size, max_size=max_size))
     offsets = np.zeros(len(bytestrings) + 1, dtype=np.int64)
     for i, b in enumerate(bytestrings):

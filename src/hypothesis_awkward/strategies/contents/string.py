@@ -13,7 +13,24 @@ def string_contents(
     min_size: int = 0,
     max_size: int = 10,
 ) -> ListOffsetArray:
-    '''Strategy for ListOffsetArray string content.'''
+    '''Strategy for ListOffsetArray string content.
+
+    Parameters
+    ----------
+    alphabet
+        A strategy for characters used in the generated strings. If ``None``,
+        the full Unicode range is used.
+    min_size
+        Minimum number of strings.
+    max_size
+        Maximum number of strings.
+
+    Examples
+    --------
+    >>> c = string_contents().example()
+    >>> isinstance(c, ListOffsetArray)
+    True
+    '''
     text_st = st.text() if alphabet is None else st.text(alphabet=alphabet)
     strings = draw(st.lists(text_st, min_size=min_size, max_size=max_size))
     encoded = [s.encode('utf-8') for s in strings]
