@@ -116,19 +116,9 @@ def contents(
 
     draw_leaf = CountdownDrawer(draw, st_leaf, max_size_total=max_size)
 
-    budget_exhausted = False
-
-    def _leaf() -> Content:
-        nonlocal budget_exhausted
-        content = draw_leaf()
-        if content is not None:
-            return content
-        budget_exhausted = True
-        return draw(st_leaf(min_size=0, max_size=0))
-
-    def _build(depth: int, *, allow_union: bool = True) -> Content:
-        if budget_exhausted or depth >= max_depth or not draw(st.booleans()):
-            return _leaf()
+    def _build(depth: int, *, allow_union: bool = True) -> Content | None:
+        if depth >= max_depth or not draw(st.booleans()):
+            return draw_leaf()
 
         # Choose node type from allow_* flags
         candidates: list[str] = []
@@ -144,32 +134,49 @@ def contents(
             candidates.append('union')
 
         if not candidates:
-            return _leaf()
+            return draw_leaf()
 
         node_type = draw(st.sampled_from(sorted(candidates)))
 
         # Build children for multi-child types
         if node_type == 'union':
-            children = [
-                _build(depth + 1, allow_union=False),
-                _build(depth + 1, allow_union=False),
-            ]
-            while not budget_exhausted and draw(st.booleans()):
-                children.append(_build(depth + 1, allow_union=False))
+            first = _build(depth + 1, allow_union=False)
+            if first is None:
+                return None
+            second = _build(depth + 1, allow_union=False)
+            if second is None:
+                return None
+            children = [first, second]
+            while draw(st.booleans()):
+                child = _build(depth + 1, allow_union=False)
+                if child is None:
+                    break
+                children.append(child)
             return draw(st_ak.contents.union_array_contents(children))
 
         if node_type == 'record':
-            children = [_build(depth + 1, allow_union=allow_union)]
-            while not budget_exhausted and draw(st.booleans()):
-                children.append(_build(depth + 1, allow_union=allow_union))
+            first = _build(depth + 1, allow_union=allow_union)
+            if first is None:
+                return None
+            children = [first]
+            while draw(st.booleans()):
+                child = _build(depth + 1, allow_union=allow_union)
+                if child is None:
+                    break
+                children.append(child)
             return draw(st_ak.contents.record_array_contents(children))
 
         # Single-child wrapper
         child = _build(depth + 1, allow_union=allow_union)
+        if child is None:
+            return None
         if node_type == 'regular':
             return draw(st_ak.contents.regular_array_contents(child))
         if node_type == 'list_offset':
             return draw(st_ak.contents.list_offset_array_contents(child))
         return draw(st_ak.contents.list_array_contents(child))
 
-    return _build(0, allow_union=allow_union)
+    result = _build(0, allow_union=allow_union)
+    if result is not None:
+        return result
+    return draw(st_leaf(min_size=0, max_size=0))
