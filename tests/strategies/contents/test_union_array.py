@@ -147,3 +147,28 @@ def test_draw_from_contents() -> None:
         ),
         settings=settings(phases=[Phase.generate], max_examples=2000),
     )
+
+
+def test_draw_nested_union() -> None:
+    '''Assert that a UnionArray with a descendant UnionArray can be drawn.
+
+    Direct children of a union must not be unions (no ``Union[Union[...]]``),
+    but deeper descendants may be, e.g. ``Union[Record[Union[...], ...], ...]``.
+    '''
+
+    def _has_nested_union(c: Content) -> bool:
+        for node in iter_contents(c):
+            if not isinstance(node, UnionArray):
+                continue
+            # Check if any descendant is a UnionArray
+            for child in node.contents:
+                for descendant in iter_contents(child):
+                    if isinstance(descendant, UnionArray):
+                        return True
+        return False
+
+    find(
+        st_ak.contents.contents(max_size=20, max_depth=5),
+        _has_nested_union,
+        settings=settings(phases=[Phase.generate], max_examples=5000),
+    )

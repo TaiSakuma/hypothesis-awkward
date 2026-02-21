@@ -144,6 +144,7 @@ def _build(
     allow_list: bool,
     allow_record: bool,
     allow_union: bool = True,
+    _is_union_child: bool = False,
 ) -> Content | None:
     recurse = functools.partial(
         _build,
@@ -154,6 +155,7 @@ def _build(
         allow_list_offset=allow_list_offset,
         allow_list=allow_list,
         allow_record=allow_record,
+        allow_union=allow_union,
     )
 
     if depth >= max_depth or not draw(st.booleans()):
@@ -169,7 +171,7 @@ def _build(
         candidates.append('list')
     if allow_record:
         candidates.append('record')
-    if allow_union:
+    if allow_union and not _is_union_child:
         candidates.append('union')
 
     if not candidates:
@@ -179,34 +181,34 @@ def _build(
 
     # Build children for multi-child types
     if node_type == 'union':
-        first = recurse(depth + 1, allow_union=False)
+        first = recurse(depth + 1, _is_union_child=True)
         if first is None:
             return None
-        second = recurse(depth + 1, allow_union=False)
+        second = recurse(depth + 1, _is_union_child=True)
         if second is None:
             return None
         children = [first, second]
         while draw(st.booleans()):
-            child = recurse(depth + 1, allow_union=False)
+            child = recurse(depth + 1, _is_union_child=True)
             if child is None:
                 break
             children.append(child)
         return draw(st_ak.contents.union_array_contents(children))
 
     if node_type == 'record':
-        first = recurse(depth + 1, allow_union=allow_union)
+        first = recurse(depth + 1)
         if first is None:
             return None
         children = [first]
         while draw(st.booleans()):
-            child = recurse(depth + 1, allow_union=allow_union)
+            child = recurse(depth + 1)
             if child is None:
                 break
             children.append(child)
         return draw(st_ak.contents.record_array_contents(children))
 
     # Single-child wrapper
-    child = recurse(depth + 1, allow_union=allow_union)
+    child = recurse(depth + 1)
     if child is None:
         return None
     if node_type == 'regular':
