@@ -150,9 +150,9 @@ def contents(
 
         # Construct node
         if node_type == 'union':
-            return _make_union(draw, children)
+            return draw(st_ak.contents.union_array_contents(children))
         if node_type == 'record':
-            return _make_record(draw, children)
+            return draw(st_ak.contents.record_array_contents(children))
         return draw(wrappers[node_type](st.just(children[0])))
 
     return _build(0)
@@ -175,11 +175,3 @@ def _candidate_node_types(
     if not candidates:
         return sorted(wrappers)
     return sorted(candidates)
-
-
-def _make_record(draw: st.DrawFn, children: list[Content]) -> Content:
-    return draw(st_ak.contents.record_array_contents(children))
-
-
-def _make_union(draw: st.DrawFn, children: list[Content]) -> UnionArray:
-    return draw(st_ak.contents.union_array_contents(children))
