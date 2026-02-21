@@ -1,12 +1,11 @@
 import functools
-import string
 from collections.abc import Callable
 
 import numpy as np
 from hypothesis import strategies as st
 
 import hypothesis_awkward.strategies as st_ak
-from awkward.contents import Content, RecordArray, UnionArray
+from awkward.contents import Content, UnionArray
 from hypothesis_awkward.strategies.contents.leaf import leaf_contents
 from hypothesis_awkward.util.draw import CountdownDrawer
 
@@ -171,22 +170,8 @@ def contents(
     return _build(0)
 
 
-def _make_record(draw: st.DrawFn, children: list[Content]) -> RecordArray:
-    is_tuple = draw(st.booleans())
-    if is_tuple:
-        fields = None
-    else:
-        st_names = st.text(alphabet=string.ascii_letters, max_size=3)
-        fields = draw(
-            st.lists(
-                st_names,
-                min_size=len(children),
-                max_size=len(children),
-                unique=True,
-            )
-        )
-    length = min(len(c) for c in children)
-    return RecordArray(children, fields=fields, length=length)
+def _make_record(draw: st.DrawFn, children: list[Content]) -> Content:
+    return draw(st_ak.contents.record_array_contents(children))
 
 
 def _make_union(draw: st.DrawFn, children: list[Content]) -> UnionArray:
