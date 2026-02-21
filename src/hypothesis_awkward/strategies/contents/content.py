@@ -33,6 +33,7 @@ def contents(
     allow_list: bool = True,
     allow_record: bool = True,
     allow_union: bool = True,
+    allow_union_root: bool = True,
     max_depth: int = 5,
 ) -> Content:
     '''Strategy for Awkward Array content layouts.
@@ -83,6 +84,11 @@ def contents(
         No ``RecordArray`` is generated if ``False``.
     allow_union
         No ``UnionArray`` is generated if ``False``.
+    allow_union_root
+        The outermost content node cannot be a ``UnionArray`` if ``False``.
+        Unlike ``allow_union``, this does not prevent ``UnionArray`` at
+        deeper levels. Awkward Array does not allow a ``UnionArray`` to
+        directly contain another ``UnionArray``.
     max_depth
         Maximum nesting depth. At each level below this limit, a coin flip
         decides whether to descend further or produce a leaf. Each
@@ -132,6 +138,7 @@ def contents(
             allow_list=allow_list,
             allow_record=allow_record,
             allow_union=allow_union,
+            allow_union_root=allow_union_root,
         )
     )
 
@@ -148,7 +155,7 @@ def _build(
     allow_list: bool,
     allow_record: bool,
     allow_union: bool = True,
-    _is_union_child: bool = False,
+    allow_union_root: bool = True,
 ) -> Content:
     recurse = functools.partial(
         _build,
@@ -174,7 +181,7 @@ def _build(
         candidates.append('list')
     if allow_record:
         candidates.append('record')
-    if allow_union and not _is_union_child:
+    if allow_union and allow_union_root:
         candidates.append('union')
 
     if not candidates:
@@ -185,13 +192,13 @@ def _build(
     # Build children for multi-child types
     if node_type == 'union':
         remaining = max_size
-        first = draw(recurse(max_size=remaining, _is_union_child=True))
+        first = draw(recurse(max_size=remaining, allow_union_root=False))
         remaining -= _leaf_size(first)
-        second = draw(recurse(max_size=max(remaining, 0), _is_union_child=True))
+        second = draw(recurse(max_size=max(remaining, 0), allow_union_root=False))
         remaining -= _leaf_size(second)
         children = [first, second]
         while draw(st.booleans()) and remaining > 0:
-            child = draw(recurse(max_size=max(remaining, 0), _is_union_child=True))
+            child = draw(recurse(max_size=max(remaining, 0), allow_union_root=False))
             remaining -= _leaf_size(child)
             children.append(child)
         return draw(st_ak.contents.union_array_contents(children))
