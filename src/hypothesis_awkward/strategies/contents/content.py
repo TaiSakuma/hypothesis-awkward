@@ -1,5 +1,4 @@
 import functools
-from collections.abc import Callable
 
 import numpy as np
 from hypothesis import strategies as st
@@ -8,8 +7,6 @@ import hypothesis_awkward.strategies as st_ak
 from awkward.contents import Content, UnionArray
 from hypothesis_awkward.strategies.contents.leaf import leaf_contents
 from hypothesis_awkward.util.draw import CountdownDrawer
-
-_WrapperFn = Callable[[st.SearchStrategy[Content]], st.SearchStrategy[Content]]
 
 
 @st.composite
@@ -92,20 +89,6 @@ def contents(
     True
 
     '''
-    wrappers: dict[str, _WrapperFn] = {}
-    if allow_regular:
-        wrappers['regular'] = st_ak.contents.regular_array_contents
-    if allow_list_offset:
-        wrappers['list_offset'] = st_ak.contents.list_offset_array_contents
-    if allow_list:
-        wrappers['list'] = st_ak.contents.list_array_contents
-
-    can_branch = allow_record or allow_union
-
-    single_child_types = list(wrappers)
-    if allow_record:
-        single_child_types.append('record')
-
     st_leaf = functools.partial(
         leaf_contents,
         dtypes=dtypes,
@@ -138,11 +121,13 @@ def contents(
         children = [_build(depth + 1)]
 
         # Going up: another edge?
-        while can_branch and draw(st.booleans()):
+        while any((allow_record, allow_union)) and draw(st.booleans()):
             children.append(_build(depth + 1))
 
         candidates = _candidate_node_types(
-            children, single_child_types, allow_record, allow_union, wrappers
+            children,
+            allow_record, allow_union,
+            allow_regular, allow_list_offset, allow_list,
         )
         if not candidates:
             return children[0]
@@ -153,25 +138,46 @@ def contents(
             return draw(st_ak.contents.union_array_contents(children))
         if node_type == 'record':
             return draw(st_ak.contents.record_array_contents(children))
-        return draw(wrappers[node_type](st.just(children[0])))
+        if node_type == 'regular':
+            return draw(st_ak.contents.regular_array_contents(st.just(children[0])))
+        if node_type == 'list_offset':
+            return draw(st_ak.contents.list_offset_array_contents(st.just(children[0])))
+        return draw(st_ak.contents.list_array_contents(st.just(children[0])))
 
     return _build(0)
 
 
 def _candidate_node_types(
     children: list[Content],
-    single_child_types: list[str],
     allow_record: bool,
     allow_union: bool,
-    wrappers: dict[str, _WrapperFn],
+    allow_regular: bool,
+    allow_list_offset: bool,
+    allow_list: bool,
 ) -> list[str]:
     if len(children) == 1:
-        return sorted(single_child_types)
-    candidates: list[str] = []
+        candidates: list[str] = []
+        if allow_regular:
+            candidates.append('regular')
+        if allow_list_offset:
+            candidates.append('list_offset')
+        if allow_list:
+            candidates.append('list')
+        if allow_record:
+            candidates.append('record')
+        return sorted(candidates)
+    candidates = []
     if allow_record:
         candidates.append('record')
     if allow_union and not any(isinstance(c, UnionArray) for c in children):
         candidates.append('union')
     if not candidates:
-        return sorted(wrappers)
+        fallback: list[str] = []
+        if allow_regular:
+            fallback.append('regular')
+        if allow_list_offset:
+            fallback.append('list_offset')
+        if allow_list:
+            fallback.append('list')
+        return sorted(fallback)
     return sorted(candidates)
