@@ -49,9 +49,10 @@ uv run ruff format src tests
     `contents`, `leaf_contents`, `numpy_array_contents`,
     `empty_array_contents`, `regular_array_contents`,
     `list_offset_array_contents`, `list_array_contents`,
-    `string_contents`, `bytestring_contents`, `record_array_contents`
+    `string_contents`, `bytestring_contents`, `record_array_contents`,
+    `union_array_contents`
   - `constructors/` - Strategies via direct Content constructors: `arrays`
-    (notable parameters: `allow_record`, `allow_virtual`)
+    (notable parameters: `allow_record`, `allow_union`, `allow_virtual`)
   - `pandas/` - Strategies related to pandas DataFrames: `dicts_for_dataframe`
   - `forms/` - (experimental) Strategies for Awkward Forms: `numpy_forms`
   - `types/` - (experimental) Strategies for Awkward Types: `numpy_types`

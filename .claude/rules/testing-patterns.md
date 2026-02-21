@@ -28,6 +28,7 @@ class ContentsKwargs(TypedDict, total=False):
     allow_list_offset: bool
     allow_list: bool
     allow_record: bool
+    allow_union: bool
     max_depth: int
 ```
 
@@ -67,6 +68,7 @@ def contents_kwargs(
                 'allow_list_offset': st.booleans(),
                 'allow_list': st.booleans(),
                 'allow_record': st.booleans(),
+                'allow_union': st.booleans(),
                 'max_depth': st.integers(min_value=0, max_value=5),
             },
         )
