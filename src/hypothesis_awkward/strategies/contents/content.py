@@ -122,8 +122,6 @@ def contents(
     if leaf_only:
         return draw(st_leaf(min_size=0, max_size=max_size))
 
-    max_size = draw(st.integers(min_value=0, max_value=max_size))
-
     return draw(
         _build(
             st_leaf,
