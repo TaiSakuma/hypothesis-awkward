@@ -1,4 +1,5 @@
 import functools
+from collections.abc import Callable
 
 import numpy as np
 from hypothesis import strategies as st
@@ -116,67 +117,100 @@ def contents(
 
     draw_leaf = CountdownDrawer(draw, st_leaf, max_size_total=max_size)
 
-    def _build(depth: int, *, allow_union: bool = True) -> Content | None:
-        if depth >= max_depth or not draw(st.booleans()):
-            return draw_leaf()
-
-        # Choose node type from allow_* flags
-        candidates: list[str] = []
-        if allow_regular:
-            candidates.append('regular')
-        if allow_list_offset:
-            candidates.append('list_offset')
-        if allow_list:
-            candidates.append('list')
-        if allow_record:
-            candidates.append('record')
-        if allow_union:
-            candidates.append('union')
-
-        if not candidates:
-            return draw_leaf()
-
-        node_type = draw(st.sampled_from(sorted(candidates)))
-
-        # Build children for multi-child types
-        if node_type == 'union':
-            first = _build(depth + 1, allow_union=False)
-            if first is None:
-                return None
-            second = _build(depth + 1, allow_union=False)
-            if second is None:
-                return None
-            children = [first, second]
-            while draw(st.booleans()):
-                child = _build(depth + 1, allow_union=False)
-                if child is None:
-                    break
-                children.append(child)
-            return draw(st_ak.contents.union_array_contents(children))
-
-        if node_type == 'record':
-            first = _build(depth + 1, allow_union=allow_union)
-            if first is None:
-                return None
-            children = [first]
-            while draw(st.booleans()):
-                child = _build(depth + 1, allow_union=allow_union)
-                if child is None:
-                    break
-                children.append(child)
-            return draw(st_ak.contents.record_array_contents(children))
-
-        # Single-child wrapper
-        child = _build(depth + 1, allow_union=allow_union)
-        if child is None:
-            return None
-        if node_type == 'regular':
-            return draw(st_ak.contents.regular_array_contents(child))
-        if node_type == 'list_offset':
-            return draw(st_ak.contents.list_offset_array_contents(child))
-        return draw(st_ak.contents.list_array_contents(child))
-
-    result = _build(0, allow_union=allow_union)
+    result = _build(
+        draw,
+        draw_leaf,
+        0,
+        max_depth=max_depth,
+        allow_regular=allow_regular,
+        allow_list_offset=allow_list_offset,
+        allow_list=allow_list,
+        allow_record=allow_record,
+        allow_union=allow_union,
+    )
     if result is not None:
         return result
     return draw(st_leaf(min_size=0, max_size=0))
+
+
+def _build(
+    draw: st.DrawFn,
+    draw_leaf: Callable[[], Content | None],
+    depth: int,
+    *,
+    max_depth: int,
+    allow_regular: bool,
+    allow_list_offset: bool,
+    allow_list: bool,
+    allow_record: bool,
+    allow_union: bool = True,
+) -> Content | None:
+    recurse = functools.partial(
+        _build,
+        draw,
+        draw_leaf,
+        max_depth=max_depth,
+        allow_regular=allow_regular,
+        allow_list_offset=allow_list_offset,
+        allow_list=allow_list,
+        allow_record=allow_record,
+    )
+
+    if depth >= max_depth or not draw(st.booleans()):
+        return draw_leaf()
+
+    # Choose node type from allow_* flags
+    candidates: list[str] = []
+    if allow_regular:
+        candidates.append('regular')
+    if allow_list_offset:
+        candidates.append('list_offset')
+    if allow_list:
+        candidates.append('list')
+    if allow_record:
+        candidates.append('record')
+    if allow_union:
+        candidates.append('union')
+
+    if not candidates:
+        return draw_leaf()
+
+    node_type = draw(st.sampled_from(sorted(candidates)))
+
+    # Build children for multi-child types
+    if node_type == 'union':
+        first = recurse(depth + 1, allow_union=False)
+        if first is None:
+            return None
+        second = recurse(depth + 1, allow_union=False)
+        if second is None:
+            return None
+        children = [first, second]
+        while draw(st.booleans()):
+            child = recurse(depth + 1, allow_union=False)
+            if child is None:
+                break
+            children.append(child)
+        return draw(st_ak.contents.union_array_contents(children))
+
+    if node_type == 'record':
+        first = recurse(depth + 1, allow_union=allow_union)
+        if first is None:
+            return None
+        children = [first]
+        while draw(st.booleans()):
+            child = recurse(depth + 1, allow_union=allow_union)
+            if child is None:
+                break
+            children.append(child)
+        return draw(st_ak.contents.record_array_contents(children))
+
+    # Single-child wrapper
+    child = recurse(depth + 1, allow_union=allow_union)
+    if child is None:
+        return None
+    if node_type == 'regular':
+        return draw(st_ak.contents.regular_array_contents(child))
+    if node_type == 'list_offset':
+        return draw(st_ak.contents.list_offset_array_contents(child))
+    return draw(st_ak.contents.list_array_contents(child))
