@@ -1,5 +1,4 @@
 import functools
-from collections.abc import Callable
 
 import numpy as np
 from hypothesis import strategies as st
@@ -8,8 +7,6 @@ import hypothesis_awkward.strategies as st_ak
 from awkward.contents import Content
 from hypothesis_awkward.strategies.contents.leaf import leaf_contents
 from hypothesis_awkward.util.awkward import iter_leaf_contents
-
-_StLeaf = Callable[..., st.SearchStrategy[Content]]
 
 
 def _leaf_size(c: Content) -> int:
@@ -128,38 +125,17 @@ def contents(
     if leaf_only:
         return draw(st_leaf(min_size=0, max_size=max_size))
 
-    return draw(
-        _build(
-            st_leaf,
-            max_size=max_size,
-            max_depth=max_depth,
-            allow_regular=allow_regular,
-            allow_list_offset=allow_list_offset,
-            allow_list=allow_list,
-            allow_record=allow_record,
-            allow_union=allow_union,
-            allow_union_root=allow_union_root,
-        )
-    )
+    if max_depth <= 0 or not draw(st.booleans()):
+        return draw(st_leaf(min_size=0, max_size=max_size))
 
-
-@st.composite
-def _build(
-    draw: st.DrawFn,
-    st_leaf: _StLeaf,
-    *,
-    max_size: int,
-    max_depth: int,
-    allow_regular: bool,
-    allow_list_offset: bool,
-    allow_list: bool,
-    allow_record: bool,
-    allow_union: bool = True,
-    allow_union_root: bool = True,
-) -> Content:
     recurse = functools.partial(
-        _build,
-        st_leaf,
+        contents,
+        dtypes=dtypes,
+        allow_nan=allow_nan,
+        allow_numpy=allow_numpy,
+        allow_empty=allow_empty,
+        allow_string=allow_string,
+        allow_bytestring=allow_bytestring,
         max_depth=max_depth - 1,
         allow_regular=allow_regular,
         allow_list_offset=allow_list_offset,
@@ -167,9 +143,6 @@ def _build(
         allow_record=allow_record,
         allow_union=allow_union,
     )
-
-    if max_depth <= 0 or not draw(st.booleans()):
-        return draw(st_leaf(min_size=0, max_size=max_size))
 
     # Choose node type from allow_* flags
     candidates: list[str] = []
