@@ -141,7 +141,9 @@ def test_draw_from_contents() -> None:
     '''Assert that UnionArray can be drawn from `contents()`.'''
     find(
         st_ak.contents.contents(max_size=20),
-        lambda c: isinstance(c, UnionArray)
-        or any(isinstance(n, UnionArray) for n in iter_contents(c)),
+        lambda c: (
+            isinstance(c, UnionArray)
+            or any(isinstance(n, UnionArray) for n in iter_contents(c))
+        ),
         settings=settings(phases=[Phase.generate], max_examples=2000),
     )

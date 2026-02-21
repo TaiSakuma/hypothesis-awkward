@@ -23,9 +23,11 @@ def test_iter_numpy_arrays(data: st.DataObject) -> None:
     exclude_string = data.draw(st.booleans(), label='exclude_string')
     exclude_bytestring = data.draw(st.booleans(), label='exclude_bytestring')
 
-    result = list(iter_numpy_arrays(
-        a, exclude_string=exclude_string, exclude_bytestring=exclude_bytestring
-    ))
+    result = list(
+        iter_numpy_arrays(
+            a, exclude_string=exclude_string, exclude_bytestring=exclude_bytestring
+        )
+    )
 
     assert all(isinstance(arr, np.ndarray) for arr in result)
 

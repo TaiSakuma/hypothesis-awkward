@@ -24,9 +24,7 @@ def _contents_list(
 ) -> list[Content]:
     '''Draw a list of 1..5 Content objects for testing.'''
     n = draw(st.integers(min_value=1, max_value=5))
-    return [
-        draw(st_ak.contents.contents(max_size=5, max_depth=2)) for _ in range(n)
-    ]
+    return [draw(st_ak.contents.contents(max_size=5, max_depth=2)) for _ in range(n)]
 
 
 @st.composite

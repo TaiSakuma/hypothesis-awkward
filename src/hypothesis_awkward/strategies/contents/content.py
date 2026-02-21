@@ -99,9 +99,18 @@ def contents(
         allow_bytestring=allow_bytestring,
     )
 
-    leaf_only = not any((
-        allow_regular, allow_list_offset, allow_list, allow_record, allow_union,
-    )) or max_size == 0
+    leaf_only = (
+        not any(
+            (
+                allow_regular,
+                allow_list_offset,
+                allow_list,
+                allow_record,
+                allow_union,
+            )
+        )
+        or max_size == 0
+    )
     if leaf_only:
         return draw(st_leaf(min_size=0, max_size=max_size))
 
@@ -126,8 +135,11 @@ def contents(
 
         candidates = _candidate_node_types(
             children,
-            allow_record, allow_union,
-            allow_regular, allow_list_offset, allow_list,
+            allow_record,
+            allow_union,
+            allow_regular,
+            allow_list_offset,
+            allow_list,
         )
         if not candidates:
             return children[0]

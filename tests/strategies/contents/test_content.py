@@ -110,7 +110,9 @@ def test_contents(data: st.DataObject) -> None:
     allow_union = opts.kwargs.get('allow_union', True)
     max_depth = opts.kwargs.get('max_depth', DEFAULT_MAX_DEPTH)
 
-    allow_any_nesting = any((allow_regular, allow_list_offset, allow_list, allow_record, allow_union))
+    allow_any_nesting = any(
+        (allow_regular, allow_list_offset, allow_list, allow_record, allow_union)
+    )
     if not allow_any_nesting:
         assert _nesting_depth(c) == 0
 
@@ -149,7 +151,6 @@ def test_contents(data: st.DataObject) -> None:
         assert not any_nan_nat_in_awkward_array(c)
 
     assert _nesting_depth(c) <= max_depth
-
 
 
 def test_draw_max_depth() -> None:

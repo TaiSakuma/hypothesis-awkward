@@ -127,8 +127,10 @@ def test_draw_numpy_array() -> None:
     '''Assert that NumpyArray can be drawn by default.'''
     find(
         st_ak.contents.leaf_contents(),
-        lambda c: isinstance(c, NumpyArray)
-        and c.parameter('__array__') not in ('string', 'bytestring'),
+        lambda c: (
+            isinstance(c, NumpyArray)
+            and c.parameter('__array__') not in ('string', 'bytestring')
+        ),
         settings=settings(phases=[Phase.generate]),
     )
 

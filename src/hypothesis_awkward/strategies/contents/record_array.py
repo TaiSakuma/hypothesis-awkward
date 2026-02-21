@@ -35,9 +35,7 @@ def record_array_contents(
     match contents:
         case None:
             n = draw(st.integers(min_value=0, max_value=max_fields))
-            contents = [
-                draw(st_ak.contents.contents()) for _ in range(n)
-            ]
+            contents = [draw(st_ak.contents.contents()) for _ in range(n)]
         case st.SearchStrategy():
             contents = draw(contents)
         case list():
