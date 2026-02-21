@@ -7,7 +7,14 @@ from hypothesis import strategies as st
 import hypothesis_awkward.strategies as st_ak
 from awkward.contents import Content
 from hypothesis_awkward.strategies.contents.leaf import leaf_contents
-from hypothesis_awkward.util.draw import CountdownDrawer
+from hypothesis_awkward.util.awkward import iter_leaf_contents
+
+_StLeaf = Callable[..., st.SearchStrategy[Content]]
+
+
+def _leaf_size(c: Content) -> int:
+    '''Count total leaf elements in a content tree.'''
+    return sum(len(leaf) for leaf in iter_leaf_contents(c))
 
 
 @st.composite
@@ -115,12 +122,13 @@ def contents(
     if leaf_only:
         return draw(st_leaf(min_size=0, max_size=max_size))
 
-    draw_leaf = CountdownDrawer(draw, st_leaf, max_size_total=max_size)
+    max_size = draw(st.integers(min_value=0, max_value=max_size))
 
-    result = _build(
+    return _build(
         draw,
-        draw_leaf,
+        st_leaf,
         0,
+        max_size=max_size,
         max_depth=max_depth,
         allow_regular=allow_regular,
         allow_list_offset=allow_list_offset,
@@ -128,16 +136,14 @@ def contents(
         allow_record=allow_record,
         allow_union=allow_union,
     )
-    if result is not None:
-        return result
-    return draw(st_leaf(min_size=0, max_size=0))
 
 
 def _build(
     draw: st.DrawFn,
-    draw_leaf: Callable[[], Content | None],
+    st_leaf: _StLeaf,
     depth: int,
     *,
+    max_size: int,
     max_depth: int,
     allow_regular: bool,
     allow_list_offset: bool,
@@ -145,11 +151,11 @@ def _build(
     allow_record: bool,
     allow_union: bool = True,
     _is_union_child: bool = False,
-) -> Content | None:
+) -> Content:
     recurse = functools.partial(
         _build,
         draw,
-        draw_leaf,
+        st_leaf,
         max_depth=max_depth,
         allow_regular=allow_regular,
         allow_list_offset=allow_list_offset,
@@ -159,7 +165,7 @@ def _build(
     )
 
     if depth >= max_depth or not draw(st.booleans()):
-        return draw_leaf()
+        return draw(st_leaf(min_size=0, max_size=max_size))
 
     # Choose node type from allow_* flags
     candidates: list[str] = []
@@ -175,42 +181,37 @@ def _build(
         candidates.append('union')
 
     if not candidates:
-        return draw_leaf()
+        return draw(st_leaf(min_size=0, max_size=max_size))
 
     node_type = draw(st.sampled_from(sorted(candidates)))
 
     # Build children for multi-child types
     if node_type == 'union':
-        first = recurse(depth + 1, _is_union_child=True)
-        if first is None:
-            return None
-        second = recurse(depth + 1, _is_union_child=True)
-        if second is None:
-            return None
+        remaining = max_size
+        first = recurse(depth + 1, max_size=remaining, _is_union_child=True)
+        remaining -= _leaf_size(first)
+        second = recurse(depth + 1, max_size=max(remaining, 0), _is_union_child=True)
+        remaining -= _leaf_size(second)
         children = [first, second]
-        while draw(st.booleans()):
-            child = recurse(depth + 1, _is_union_child=True)
-            if child is None:
-                break
+        while draw(st.booleans()) and remaining > 0:
+            child = recurse(depth + 1, max_size=max(remaining, 0), _is_union_child=True)
+            remaining -= _leaf_size(child)
             children.append(child)
         return draw(st_ak.contents.union_array_contents(children))
 
     if node_type == 'record':
-        first = recurse(depth + 1)
-        if first is None:
-            return None
+        remaining = max_size
+        first = recurse(depth + 1, max_size=remaining)
+        remaining -= _leaf_size(first)
         children = [first]
-        while draw(st.booleans()):
-            child = recurse(depth + 1)
-            if child is None:
-                break
+        while draw(st.booleans()) and remaining > 0:
+            child = recurse(depth + 1, max_size=max(remaining, 0))
+            remaining -= _leaf_size(child)
             children.append(child)
         return draw(st_ak.contents.record_array_contents(children))
 
     # Single-child wrapper
-    child = recurse(depth + 1)
-    if child is None:
-        return None
+    child = recurse(depth + 1, max_size=max_size)
     if node_type == 'regular':
         return draw(st_ak.contents.regular_array_contents(child))
     if node_type == 'list_offset':
