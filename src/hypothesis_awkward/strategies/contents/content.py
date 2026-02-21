@@ -127,7 +127,6 @@ def contents(
     return draw(
         _build(
             st_leaf,
-            0,
             max_size=max_size,
             max_depth=max_depth,
             allow_regular=allow_regular,
@@ -143,7 +142,6 @@ def contents(
 def _build(
     draw: st.DrawFn,
     st_leaf: _StLeaf,
-    depth: int,
     *,
     max_size: int,
     max_depth: int,
@@ -157,7 +155,7 @@ def _build(
     recurse = functools.partial(
         _build,
         st_leaf,
-        max_depth=max_depth,
+        max_depth=max_depth - 1,
         allow_regular=allow_regular,
         allow_list_offset=allow_list_offset,
         allow_list=allow_list,
@@ -165,7 +163,7 @@ def _build(
         allow_union=allow_union,
     )
 
-    if depth >= max_depth or not draw(st.booleans()):
+    if max_depth <= 0 or not draw(st.booleans()):
         return draw(st_leaf(min_size=0, max_size=max_size))
 
     # Choose node type from allow_* flags
@@ -189,34 +187,30 @@ def _build(
     # Build children for multi-child types
     if node_type == 'union':
         remaining = max_size
-        first = draw(recurse(depth + 1, max_size=remaining, _is_union_child=True))
+        first = draw(recurse(max_size=remaining, _is_union_child=True))
         remaining -= _leaf_size(first)
-        second = draw(
-            recurse(depth + 1, max_size=max(remaining, 0), _is_union_child=True)
-        )
+        second = draw(recurse(max_size=max(remaining, 0), _is_union_child=True))
         remaining -= _leaf_size(second)
         children = [first, second]
         while draw(st.booleans()) and remaining > 0:
-            child = draw(
-                recurse(depth + 1, max_size=max(remaining, 0), _is_union_child=True)
-            )
+            child = draw(recurse(max_size=max(remaining, 0), _is_union_child=True))
             remaining -= _leaf_size(child)
             children.append(child)
         return draw(st_ak.contents.union_array_contents(children))
 
     if node_type == 'record':
         remaining = max_size
-        first = draw(recurse(depth + 1, max_size=remaining))
+        first = draw(recurse(max_size=remaining))
         remaining -= _leaf_size(first)
         children = [first]
         while draw(st.booleans()) and remaining > 0:
-            child = draw(recurse(depth + 1, max_size=max(remaining, 0)))
+            child = draw(recurse(max_size=max(remaining, 0)))
             remaining -= _leaf_size(child)
             children.append(child)
         return draw(st_ak.contents.record_array_contents(children))
 
     # Single-child wrapper
-    child = draw(recurse(depth + 1, max_size=max_size))
+    child = draw(recurse(max_size=max_size))
     if node_type == 'regular':
         return draw(st_ak.contents.regular_array_contents(child))
     if node_type == 'list_offset':
