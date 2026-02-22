@@ -178,7 +178,7 @@ def contents(
             return draw(st_ak.contents.union_array_contents(children))
 
         case 'record':
-            children = draw(content_lists(recurse, max_total_size=max_size))
+            children = draw(content_lists(recurse, max_total_size=max_size, min_size=1))
             return draw(st_ak.contents.record_array_contents(children))
 
         case 'regular':
@@ -206,8 +206,8 @@ def content_lists(
     draw: st.DrawFn,
     st_content: _StContent,
     *,
-    max_total_size: int,
-    min_size: int = 1,
+    max_total_size: int = 10,
+    min_size: int = 0,
 ) -> list[Content]:
     '''Strategy for lists of contents within a size budget.
 

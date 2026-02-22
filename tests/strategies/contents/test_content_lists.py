@@ -7,7 +7,8 @@ import hypothesis_awkward.strategies as st_ak
 from awkward.contents import Content
 from hypothesis_awkward.util import iter_leaf_contents
 
-DEFAULT_MIN_SIZE = 1
+DEFAULT_MAX_TOTAL_SIZE = 10
+DEFAULT_MIN_SIZE = 0
 
 
 def _st_content(*, max_size: int) -> st.SearchStrategy[Content]:
@@ -32,10 +33,9 @@ def content_lists_kwargs(
 
     kwargs = draw(
         st.fixed_dictionaries(
-            {
-                'max_total_size': st.integers(min_value=0, max_value=50),
-            },
+            {},
             optional={
+                'max_total_size': st.integers(min_value=0, max_value=50),
                 'min_size': st.integers(min_value=0, max_value=5),
             },
         )
@@ -51,7 +51,7 @@ def test_content_lists(data: st.DataObject) -> None:
     opts = data.draw(content_lists_kwargs(), label='opts')
     opts.reset()
 
-    max_total_size = opts.kwargs['max_total_size']
+    max_total_size = opts.kwargs.get('max_total_size', DEFAULT_MAX_TOTAL_SIZE)
     min_size = opts.kwargs.get('min_size', DEFAULT_MIN_SIZE)
 
     result = data.draw(
