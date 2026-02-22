@@ -93,5 +93,7 @@ doctest support for examples in docstrings and markdown files.
 - For forward references in type annotations, prefer string quotes (e.g., `-> 'MyClass[Any]'`) over `from __future__ import annotations`.
 - Prefer generic constructor calls over annotated assignments for typed empty
   collections (e.g., `list[int]()` over `x: list[int] = []`).
+- Place private or supportive functions after the main public functions in a
+  module.
 - Sort imports with `uv run ruff check --select I --fix src tests`.
 - Run `uv run mypy src tests` after making changes to verify type correctness.
