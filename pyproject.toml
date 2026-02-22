@@ -24,7 +24,11 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 keywords = ["hypothesis", "awkward-array", "testing", "property-based testing"]
-dependencies = ["awkward>=2.9", "hypothesis>=6.147"]
+dependencies = [
+    "awkward>=2.9",
+    "hypothesis>=6.147",
+    "typing_extensions>=4.1; python_version < '3.11'",
+]
 
 [project.optional-dependencies]
 pandas = [
