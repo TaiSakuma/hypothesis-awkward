@@ -1,10 +1,11 @@
-from typing import Any, TypedDict, cast
+from typing import Any, Callable, TypedDict, cast
 
 from hypothesis import Phase, find, given, settings
 from hypothesis import strategies as st
 
 import hypothesis_awkward.strategies as st_ak
 from awkward.contents import Content
+from hypothesis_awkward.strategies.misc.record import RecordCallDraws
 from hypothesis_awkward.util import iter_leaf_contents
 
 DEFAULT_MAX_TOTAL_SIZE = 10
@@ -14,6 +15,7 @@ DEFAULT_MIN_SIZE = 0
 class ContentListsKwargs(TypedDict, total=False):
     '''Options for `content_lists()` strategy.'''
 
+    st_content: Callable[..., st.SearchStrategy[Content]]
     max_total_size: int
     min_size: int
 
@@ -26,10 +28,16 @@ def content_lists_kwargs(
     '''Strategy for options for `content_lists()` strategy.'''
     if chain is None:
         chain = st_ak.OptsChain({})
+    st_content = chain.register_callable(st_ak.contents.contents)
 
     kwargs = draw(
         st.fixed_dictionaries(
-            {},
+            {
+                'st_content': st.one_of(
+                    st.just(st_ak.contents.contents),
+                    st.just(st_content),
+                ),
+            },
             optional={
                 'max_total_size': st.integers(min_value=0, max_value=50),
                 'min_size': st.integers(min_value=0, max_value=5),
@@ -51,7 +59,7 @@ def test_content_lists(data: st.DataObject) -> None:
     min_size = opts.kwargs.get('min_size', DEFAULT_MIN_SIZE)
 
     result = data.draw(
-        st_ak.contents.content_lists(st_ak.contents.contents, **opts.kwargs),
+        st_ak.contents.content_lists(**opts.kwargs),
         label='result',
     )
 
@@ -59,6 +67,12 @@ def test_content_lists(data: st.DataObject) -> None:
     assert all(isinstance(c, Content) for c in result)
     assert len(result) >= min_size
     assert _total_leaf_size(result) <= max_total_size
+
+    st_content = opts.kwargs['st_content']
+    match st_content:
+        case RecordCallDraws():
+            assert len(st_content.drawn) == len(result)
+            assert all(d is r for d, r in zip(st_content.drawn, result))
 
 
 def test_draw_min_size() -> None:
