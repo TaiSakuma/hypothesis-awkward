@@ -1,3 +1,5 @@
+import functools
+
 import numpy as np
 from hypothesis import strategies as st
 
@@ -31,10 +33,13 @@ def union_array_contents(
     '''
     match contents:
         case None:
-            n = draw(st.integers(min_value=2, max_value=max_contents))
-            contents = [
-                draw(st_ak.contents.contents(allow_union_root=False)) for _ in range(n)
-            ]
+            contents = draw(
+                st_ak.contents.content_lists(
+                    functools.partial(st_ak.contents.contents, allow_union_root=False),
+                    min_size=2,
+                    max_size=max_contents,
+                )
+            )
         case st.SearchStrategy():
             contents = draw(contents)
         case list():
