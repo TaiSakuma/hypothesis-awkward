@@ -4,6 +4,14 @@
 **Status:** Implemented
 **Author:** Claude (with developer collaboration)
 
+> **Update (2026-02-22):** Since this document was written:
+>
+> - `allow_union` parameter is now implemented in both `contents()` and
+>   `arrays()` (default: `True`). The signature and "Future node type flags"
+>   sections below are outdated.
+> - `UnionArray` support is fully implemented via the
+>   [top-down builder](../impl/2026-02-21-contents-top-down-builder.md).
+
 ## Overview
 
 This document describes the API for the `arrays()` strategy, which generates
@@ -680,7 +688,7 @@ Accept `np.dtype | st.SearchStrategy[np.dtype] | None` as in `numpy_arrays()`.
    [record-array-research](../research/2026-02-17-record-array-research.md)
 2. Add option type support (`allow_option`) -- `IndexedOptionArray`,
    `ByteMaskedArray`, `BitMaskedArray`, `UnmaskedArray`
-3. Add `UnionArray` support (`allow_union`)
+3. ~~Add `UnionArray` support (`allow_union`)~~ ✓
 4. ~~Add string/bytestring support (`allow_string`, `allow_bytestring`)~~ ✓ —
    see [string-bytestring-api](./../api/2026-02-13-string-bytestring-api.md)
 5. Implement content nesting constraint enforcement

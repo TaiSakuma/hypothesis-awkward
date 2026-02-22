@@ -1,8 +1,16 @@
 # Implementation: Top-Down Tree Builder for `contents()`
 
 **Date:** 2026-02-21
-**Status:** Proposed
+**Status:** Implemented
 **Supersedes:** [Bottom-up tree builder](2026-02-17-contents-tree-builder.md)
+
+> **Note (2026-02-22):** The implementation differs from the pseudocode below:
+>
+> - `contents()` is self-recursive via `functools.partial` instead of using an
+>   inner `_build()` function. `CountdownDrawer` is not used; budget is tracked
+>   by passing `max_size` minus `_leaf_size()` to each recursive call.
+> - The no-nested-union constraint uses `allow_union_root=False` (a new
+>   parameter) instead of threading `allow_union=False` down to children.
 
 ## Motivation
 

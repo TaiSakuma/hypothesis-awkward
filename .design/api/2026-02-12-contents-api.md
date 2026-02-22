@@ -4,6 +4,17 @@
 **Status:** Implemented
 **Author:** Claude (with developer collaboration)
 
+> **Update (2026-02-22):** Since this document was written:
+>
+> - `allow_union_root` parameter was added to `contents()` (default: `True`).
+>   It prevents `UnionArray` at the outermost level only, without affecting
+>   deeper nesting. Not forwarded to `arrays()`.
+> - The bottom-up tree builder referenced in this document was replaced by a
+>   [top-down builder](../impl/2026-02-21-contents-top-down-builder.md).
+>   `contents()` is now self-recursive (no inner `_build()` or
+>   `CountdownDrawer`).
+> - `UnionArray` support is fully implemented.
+
 ## Overview
 
 This document describes the API for the strategies in the `contents/` package,
@@ -787,7 +798,7 @@ values.
    [record-array-research](../research/2026-02-17-record-array-research.md)
 2. Add option type support (`indexed_option_array_contents()`,
    `byte_masked_array_contents()`, etc.)
-3. Add `UnionArray` support (`union_array_contents()`) — see
+3. ~~Add `UnionArray` support (`union_array_contents()`)~~ ✓ — see
    [union-array-research](../research/2026-02-17-union-array-research.md)
 4. ~~Add string/bytestring support~~ ✓ — see
    [string-bytestring-api](./2026-02-13-string-bytestring-api.md)
