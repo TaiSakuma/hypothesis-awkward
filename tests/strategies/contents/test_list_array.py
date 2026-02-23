@@ -7,13 +7,14 @@ import hypothesis_awkward.strategies as st_ak
 from awkward.contents import Content, ListArray
 from hypothesis_awkward.util import iter_contents
 
-MAX_LIST_LENGTH = 5
+MAX_LENGTH = 5
 
 
 class ListArrayContentsKwargs(TypedDict, total=False):
     '''Options for `list_array_contents()` strategy.'''
 
     content: st.SearchStrategy[Content] | Content
+    max_length: int
 
 
 @st.composite
@@ -34,6 +35,7 @@ def list_array_contents_kwargs(
                     st_ak.contents.contents(),
                     st.just(st_content),
                 ),
+                'max_length': st.integers(min_value=0, max_value=50),
             },
         )
     )
@@ -55,7 +57,8 @@ def test_list_array_contents(data: st.DataObject) -> None:
     assert isinstance(result, ListArray)
 
     # Assert list length is within bounds
-    assert 0 <= len(result) <= MAX_LIST_LENGTH
+    max_length = opts.kwargs.get('max_length', MAX_LENGTH)
+    assert len(result) <= max_length
 
     # Assert starts and stops have the same length
     starts = result.starts.data
@@ -75,6 +78,16 @@ def test_list_array_contents(data: st.DataObject) -> None:
         case st_ak.RecordDraws():
             assert len(content.drawn) == 1
             assert result.content is content.drawn[0]
+
+
+def test_draw_max_length() -> None:
+    '''Assert that max_length constrains the ListArray length.'''
+    max_length = 10
+    find(
+        st_ak.contents.list_array_contents(max_length=max_length),
+        lambda c: len(c) == max_length,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
 
 
 def test_draw_from_contents() -> None:
