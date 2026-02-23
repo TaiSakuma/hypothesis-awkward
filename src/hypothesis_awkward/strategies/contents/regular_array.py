@@ -39,30 +39,33 @@ def regular_array_contents(
         case Content():
             pass
     assert isinstance(content, Content)
-    size, zeros_length = draw(
-        _size_and_zeros_length(len(content), max_size, max_zeros_length)
-    )
-    return RegularArray(content, size=size, zeros_length=zeros_length)
-
-
-@st.composite
-def _size_and_zeros_length(
-    draw: st.DrawFn,
-    content_len: int,
-    max_size: int,
-    max_zeros_length: int,
-) -> tuple[int, int]:
-    if content_len == 0:
-        size = draw(st.integers(min_value=0, max_value=max_size))
-        if size == 0:
-            zeros_length = draw(st.integers(min_value=0, max_value=max_zeros_length))
-            return size, zeros_length
-        return size, 0
-    divisors = [
-        d for d in range(1, min(content_len + 1, max_size + 1)) if content_len % d == 0
-    ]
-    if not divisors:
+    size = draw(_st_group_sizes(len(content), max_size))
+    if size == 0:
         zeros_length = draw(st.integers(min_value=0, max_value=max_zeros_length))
-        return 0, zeros_length
-    size = draw(st.sampled_from(divisors))
-    return size, 0
+        return RegularArray(content, size=0, zeros_length=zeros_length)
+    return RegularArray(content, size=size)
+
+
+def _st_group_sizes(total_items: int, max_group_size: int) -> st.SearchStrategy[int]:
+    '''Strategy for the size parameter of a RegularArray.
+
+    A RegularArray subdivides ``total_items`` into equal groups of
+    ``group_size``, so ``group_size`` must be a divisor of
+    ``total_items`` and at most ``max_group_size``.
+
+    When ``total_items == 0``, any group size up to ``max_group_size``
+    is valid because zero items can be split into zero groups of any
+    size.
+
+    When ``total_items > 0`` but no valid divisor exists (i.e.,
+    ``max_group_size == 0``), returns ``0``. The caller uses this to
+    fall back to the ``zeros_length`` path, producing a RegularArray
+    whose elements are all empty.
+    '''
+    if total_items == 0:
+        return st.integers(min_value=0, max_value=max_group_size)
+    max_group_size = min(total_items, max_group_size)
+    group_sizes = [d for d in range(1, max_group_size + 1) if total_items % d == 0]
+    if not group_sizes:
+        return st.just(0)
+    return st.sampled_from(group_sizes)
