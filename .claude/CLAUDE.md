@@ -40,28 +40,10 @@ uv run ruff format src tests
 ### Source Layout (`src/hypothesis_awkward/`)
 
 - **`strategies/`** - Public Hypothesis strategies (imported as
-  `hypothesis_awkward.strategies`)
-  - `numpy/` - Strategies for Awkward Arrays from NumPy: `from_numpy`,
-    `numpy_arrays`, `numpy_dtypes`, `supported_dtype_names`, `supported_dtypes`
-  - `builtins_/` - Strategies for Awkward Arrays from Python lists: `from_list`,
-    `lists`, `items_from_dtype`, `builtin_safe_dtypes`
-  - `contents/` - Strategies for Awkward Array content layouts:
-    `contents`, `content_lists`, `leaf_contents`, `numpy_array_contents`,
-    `empty_array_contents`, `regular_array_contents`,
-    `list_offset_array_contents`, `list_array_contents`,
-    `string_contents`, `bytestring_contents`, `record_array_contents`,
-    `union_array_contents`
-  - `constructors/` - Strategies via direct Content constructors: `arrays`
-    (notable parameters: `allow_record`, `allow_union`, `allow_virtual`)
-  - `pandas/` - Strategies related to pandas DataFrames: `dicts_for_dataframe`
-  - `forms/` - (experimental) Strategies for Awkward Forms: `numpy_forms`
-  - `types/` - (experimental) Strategies for Awkward Types: `numpy_types`
-  - `misc/` - Utility strategies: `ranges`, `none_or`, `StMinMaxValuesFactory`,
-    `OptsChain`, `RecordDraws`, `RecordCallDraws`
-
+  `hypothesis_awkward.strategies`). Subpackages: `numpy/`, `builtins_/`,
+  `contents/`, `constructors/`, `pandas/`, `forms/`, `types/`, `misc/`
 - **`util/`** - Internal utilities for dtype handling, safe comparisons,
-  layout iteration (`iter_contents`, `iter_leaf_contents`, `iter_numpy_arrays`),
-  and array introspection
+  layout iteration, and array introspection
 
 ### Strategy Design Pattern
 
@@ -84,6 +66,11 @@ import hypothesis_awkward.strategies as st_ak
 
 Tests mirror the source structure under `tests/`. The project uses pytest with
 doctest support for examples in docstrings and markdown files.
+
+## Design Documents
+
+Design research, API specs, and implementation notes are in `.design/`.
+See `.design/README.md` for the index.
 
 ## Code Style
 

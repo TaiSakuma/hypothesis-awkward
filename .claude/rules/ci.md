@@ -1,3 +1,9 @@
+---
+paths:
+  - ".github/**"
+  - "pyproject.toml"
+---
+
 # CI and Dependency Management
 
 ## Dependency Pinning

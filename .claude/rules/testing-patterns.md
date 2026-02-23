@@ -1,3 +1,8 @@
+---
+paths:
+  - "tests/**"
+---
+
 # Strategy Testing Patterns
 
 Reference implementations:
