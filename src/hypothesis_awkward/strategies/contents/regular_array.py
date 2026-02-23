@@ -11,6 +11,7 @@ def regular_array_contents(
     *,
     max_size: int = 5,
     max_zeros_length: int = 5,
+    max_length: int | None = None,
 ) -> Content:
     '''Strategy for RegularArray Content wrapping child Content.
 
@@ -24,11 +25,31 @@ def regular_array_contents(
     max_zeros_length
         Upper bound on the number of elements when each element is
         empty, i.e., when size is zero.
+    max_length
+        Upper bound on the number of groups, i.e., ``len(result)``.
 
     Examples
     --------
     >>> c = regular_array_contents().example()
     >>> isinstance(c, Content)
+    True
+
+    Limit each element to at most 3 items:
+
+    >>> c = regular_array_contents(max_size=3).example()
+    >>> c.size <= 3
+    True
+
+    Limit the number of elements when size is zero:
+
+    >>> c = regular_array_contents(max_size=0, max_zeros_length=2).example()
+    >>> c.size == 0 and len(c) <= 2
+    True
+
+    Limit the number of groups:
+
+    >>> c = regular_array_contents(max_length=4).example()
+    >>> len(c) <= 4
     True
     '''
     match content:
@@ -39,14 +60,21 @@ def regular_array_contents(
         case Content():
             pass
     assert isinstance(content, Content)
-    size = draw(_st_group_sizes(len(content), max_size))
+    size = draw(_st_group_sizes(len(content), max_size, max_length))
     if size == 0:
-        zeros_length = draw(st.integers(min_value=0, max_value=max_zeros_length))
+        max_zl = max_zeros_length
+        if max_length is not None:
+            max_zl = min(max_zl, max_length)
+        zeros_length = draw(st.integers(min_value=0, max_value=max_zl))
         return RegularArray(content, size=0, zeros_length=zeros_length)
     return RegularArray(content, size=size)
 
 
-def _st_group_sizes(total_items: int, max_group_size: int) -> st.SearchStrategy[int]:
+def _st_group_sizes(
+    total_items: int,
+    max_group_size: int,
+    max_length: int | None = None,
+) -> st.SearchStrategy[int]:
     '''Strategy for the size parameter of a RegularArray.
 
     A RegularArray subdivides ``total_items`` into equal groups of
@@ -57,15 +85,26 @@ def _st_group_sizes(total_items: int, max_group_size: int) -> st.SearchStrategy[
     is valid because zero items can be split into zero groups of any
     size.
 
+    When ``max_length`` is set, only divisors that produce at most
+    ``max_length`` groups are considered, i.e., divisors ``d`` where
+    ``total_items // d <= max_length``.
+
     When ``total_items > 0`` but no valid divisor exists (i.e.,
-    ``max_group_size == 0``), returns ``0``. The caller uses this to
-    fall back to the ``zeros_length`` path, producing a RegularArray
-    whose elements are all empty.
+    ``max_group_size == 0`` or ``max_length`` is too small), returns
+    ``0``. The caller uses this to fall back to the ``zeros_length``
+    path, producing a RegularArray whose elements are all empty.
     '''
     if total_items == 0:
         return st.integers(min_value=0, max_value=max_group_size)
     max_group_size = min(total_items, max_group_size)
-    group_sizes = [d for d in range(1, max_group_size + 1) if total_items % d == 0]
+    if max_length is not None and max_length == 0:
+        return st.just(0)
+    min_group_size = 1
+    if max_length is not None:
+        min_group_size = -(-total_items // max_length)
+    group_sizes = [
+        d for d in range(min_group_size, max_group_size + 1) if total_items % d == 0
+    ]
     if not group_sizes:
         return st.just(0)
     return st.sampled_from(group_sizes)

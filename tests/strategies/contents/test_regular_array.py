@@ -6,6 +6,7 @@ from hypothesis import strategies as st
 import hypothesis_awkward.strategies as st_ak
 from awkward.contents import Content, RegularArray
 from hypothesis_awkward.util import iter_contents
+from hypothesis_awkward.util.safe import safe_compare as sc
 
 MAX_REGULAR_SIZE = 5
 MAX_ZEROS_LENGTH = 5
@@ -17,6 +18,7 @@ class RegularArrayContentsKwargs(TypedDict, total=False):
     content: st.SearchStrategy[Content] | Content
     max_size: int
     max_zeros_length: int
+    max_length: int | None
 
 
 @st.composite
@@ -39,6 +41,7 @@ def regular_array_contents_kwargs(
                 ),
                 'max_size': st.integers(min_value=0, max_value=50),
                 'max_zeros_length': st.integers(min_value=0, max_value=50),
+                'max_length': st.integers(min_value=0, max_value=50),
             },
         )
     )
@@ -67,6 +70,10 @@ def test_regular_array_contents(data: st.DataObject) -> None:
     max_zeros_length = opts.kwargs.get('max_zeros_length', MAX_ZEROS_LENGTH)
     if result.size == 0:
         assert len(result) <= max_zeros_length
+
+    # Assert length is within bounds
+    max_length = opts.kwargs.get('max_length')
+    assert len(result) <= sc(max_length)
 
     # Assert size divides content length when size > 0
     if result.size > 0:
@@ -99,6 +106,16 @@ def test_draw_max_zeros_length() -> None:
     find(
         st_ak.contents.regular_array_contents(max_zeros_length=max_zeros_length),
         lambda c: c.size == 0 and len(c) == max_zeros_length,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
+
+
+def test_draw_max_length() -> None:
+    '''Assert that max_length constrains the RegularArray length.'''
+    max_length = 10
+    find(
+        st_ak.contents.regular_array_contents(max_length=max_length),
+        lambda c: c.size > 0 and len(c) == max_length,
         settings=settings(phases=[Phase.generate], max_examples=2000),
     )
 
