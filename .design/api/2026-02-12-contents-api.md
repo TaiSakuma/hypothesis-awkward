@@ -17,6 +17,15 @@
 >   `contents()` is now self-recursive (no inner `_build()` or
 >   `CountdownDrawer`).
 > - `UnionArray` support is fully implemented.
+>
+> **Update (2026-02-23):**
+>
+> - `regular_array_contents()` gained `max_size` and `max_zeros_length`
+>   keyword parameters, replacing the module-level `MAX_REGULAR_SIZE` constant.
+>   Divisor selection is now in a `_st_group_sizes()` helper. See the updated
+>   section below.
+> - Research on a `max_length` parameter (immediate `len()` cap) is documented
+>   in [max-length-research](../research/2026-02-23-max-length-research.md).
 
 ## Overview
 
@@ -261,12 +270,13 @@ Awkward type `unknown` and length 0.
 Wraps child content in `RegularArray`.
 
 ```python
-MAX_REGULAR_SIZE = 5
-
 @st.composite
 def regular_array_contents(
     draw: st.DrawFn,
     content: st.SearchStrategy[Content] | Content | None = None,
+    *,
+    max_size: int = 5,
+    max_zeros_length: int = 5,
 ) -> Content:
 ```
 
@@ -277,17 +287,26 @@ def regular_array_contents(
   - `st.SearchStrategy[Content]`: draws from the strategy
   - `Content`: uses directly
 
+- **`max_size`** — Upper bound on the length of each element (the `size`
+  parameter of `RegularArray`). Default: `5`.
+
+- **`max_zeros_length`** — Upper bound on the number of elements when each
+  element is empty, i.e., when `size` is zero. Default: `5`.
+
 #### Behavior
 
-The `size` parameter of `RegularArray` is chosen to evenly divide the content
-length. When content length is 0, `size` is drawn from
-`[0, MAX_REGULAR_SIZE]`; if `size` is also 0, `zeros_length` is drawn from
-`[0, MAX_REGULAR_SIZE]`.
+Divisor selection is delegated to the `_st_group_sizes(total_items,
+max_group_size)` helper, which returns a strategy for the `size` parameter:
 
-#### Constants
+- When `total_items == 0`: any `size` from `[0, max_size]` is valid (zero items
+  can be split into zero groups of any size)
+- When `total_items > 0`: `size` is sampled from divisors of `total_items` that
+  are at most `max_size`
+- When `total_items > 0` but no valid divisor exists (i.e., `max_size == 0`):
+  returns `size=0`, falling through to the `zeros_length` path
 
-- `MAX_REGULAR_SIZE = 5` — upper bound for the `size` divisor and for
-  `zeros_length`
+If `size == 0`, `zeros_length` is drawn from `[0, max_zeros_length]` and a
+`RegularArray(content, size=0, zeros_length=zeros_length)` is returned.
 
 ### `list_offset_array_contents()`
 
@@ -549,17 +568,19 @@ match content:
 
 **Decision:** Use module-level constants for wrapper size limits.
 
-| Constant           | Value | Location                                         |
-| ------------------ | ----- | ------------------------------------------------ |
-| `MAX_REGULAR_SIZE` | `5`   | `contents/regular_array.py`                      |
-| `MAX_LIST_LENGTH`  | `5`   | `contents/list_offset_array.py`, `list_array.py` |
+| Constant          | Value | Location                                         |
+| ----------------- | ----- | ------------------------------------------------ |
+| `MAX_LIST_LENGTH` | `5`   | `contents/list_offset_array.py`, `list_array.py` |
+
+`MAX_REGULAR_SIZE` was removed and replaced by the `max_size` and
+`max_zeros_length` parameters on `regular_array_contents()` (both default to 5).
 
 **Rationale:**
 
 - Keeps generated arrays small and test-friendly
-- Not exposed as strategy parameters — advanced users can compose custom
-  wrappers
-- Can be promoted to parameters later if needed
+- `regular_array_contents()` now exposes its limits as parameters;
+  `MAX_LIST_LENGTH` is not yet exposed but can be promoted later
+- Advanced users can compose custom wrappers
 
 ## Relationship to Existing Strategies
 
@@ -765,10 +786,14 @@ values.
 
 ## Open Questions
 
-1. **Should wrapper strategies expose size parameters?** Currently,
+1. **Should wrapper strategies expose size parameters?** ~~Currently,
    `MAX_REGULAR_SIZE` and `MAX_LIST_LENGTH` are module-level constants. If
    promoted to parameters, the wrappers would gain keyword-only config after
-   `*`, which the signature already accommodates.
+   `*`, which the signature already accommodates.~~ **Partially resolved.**
+   `regular_array_contents()` now exposes `max_size` and `max_zeros_length`
+   as keyword-only parameters (replacing `MAX_REGULAR_SIZE`). `MAX_LIST_LENGTH`
+   in `list_offset_array_contents()` and `list_array_contents()` remains a
+   module-level constant.
 
 2. **Should `contents()` support `min_size`?** Users may want to guarantee a
    minimum number of scalars. This would require `CountdownDrawer` to expose
@@ -805,5 +830,7 @@ values.
    [union-array-research](../research/2026-02-17-union-array-research.md)
 4. ~~Add string/bytestring support~~ ✓ — see
    [string-bytestring-api](./2026-02-13-string-bytestring-api.md)
-5. Consider exposing `MAX_REGULAR_SIZE` / `MAX_LIST_LENGTH` as parameters
+5. ~~Consider exposing `MAX_REGULAR_SIZE` / `MAX_LIST_LENGTH` as parameters~~
+   Partially done — `regular_array_contents()` now exposes `max_size` and
+   `max_zeros_length`. `MAX_LIST_LENGTH` remains a constant.
 6. Consider adding `min_size` to `contents()`
