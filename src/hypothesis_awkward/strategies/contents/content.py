@@ -41,11 +41,10 @@ def contents(
 ) -> Content:
     '''Strategy for Awkward Array content layouts.
 
-    Builds content layouts by recursively constructing a tree of content
-    nodes. At each level, a coin flip decides whether to go deeper or
-    produce a leaf. Leaf types include NumpyArray, EmptyArray, string,
-    and bytestring. Wrapper types include RegularArray, ListOffsetArray,
-    ListArray, RecordArray, and UnionArray.
+    Builds content layouts by recursively constructing a tree of content nodes. At each
+    level, a coin flip decides whether to go deeper or produce a leaf. Leaf types include
+    NumpyArray, EmptyArray, string, and bytestring. Wrapper types include RegularArray,
+    ListOffsetArray, ListArray, RecordArray, and UnionArray.
 
     Parameters
     ----------
@@ -54,29 +53,27 @@ def contents(
         default strategy that generates any scalar dtype supported by Awkward Array is
         used. Does not affect string or bytestring content.
     max_size
-        Maximum total number of elements in the generated content. Each
-        numerical value, including complex and datetime, counts as one. Each
-        string and bytestring (not character or byte) counts as one.
+        Maximum total number of elements in the generated content. Each numerical value,
+        including complex and datetime, counts as one. Each string and bytestring (not
+        character or byte) counts as one.
     allow_nan
         No ``NaN``/``NaT`` values are generated in ``NumpyArray`` if ``False``.
     allow_numpy
         No ``NumpyArray`` is generated if ``False``.
     allow_empty
-        No ``EmptyArray`` is generated if ``False``. ``EmptyArray`` has Awkward
-        type ``unknown`` and carries no data. Unlike ``NumpyArray``, it is
-        unaffected by ``dtypes`` and ``allow_nan``.
+        No ``EmptyArray`` is generated if ``False``. ``EmptyArray`` has Awkward type
+        ``unknown`` and carries no data. Unlike ``NumpyArray``, it is unaffected by
+        ``dtypes`` and ``allow_nan``.
     allow_string
-        No string content is generated if ``False``. Strings are represented
-        as a ``ListOffsetArray`` wrapping a ``NumpyArray(uint8)``. Each
-        string (not character) counts toward ``max_size``. The string
-        itself does not count toward ``max_depth``. Unaffected by ``dtypes``
-        and ``allow_nan``.
+        No string content is generated if ``False``. Strings are represented as a
+        ``ListOffsetArray`` wrapping a ``NumpyArray(uint8)``. Each string (not character)
+        counts toward ``max_size``. The string itself does not count toward
+        ``max_depth``. Unaffected by ``dtypes`` and ``allow_nan``.
     allow_bytestring
-        No bytestring content is generated if ``False``. Bytestrings are
-        represented as a ``ListOffsetArray`` wrapping a ``NumpyArray(uint8)``.
-        Each bytestring (not byte) counts toward ``max_size``. The
-        bytestring itself does not count toward ``max_depth``. Unaffected
-        by ``dtypes`` and ``allow_nan``.
+        No bytestring content is generated if ``False``. Bytestrings are represented as a
+        ``ListOffsetArray`` wrapping a ``NumpyArray(uint8)``. Each bytestring (not byte)
+        counts toward ``max_size``. The bytestring itself does not count toward
+        ``max_depth``. Unaffected by ``dtypes`` and ``allow_nan``.
     allow_regular
         No ``RegularArray`` is generated if ``False``.
     allow_list_offset
@@ -88,16 +85,14 @@ def contents(
     allow_union
         No ``UnionArray`` is generated if ``False``.
     allow_union_root
-        The outermost content node cannot be a ``UnionArray`` if ``False``.
-        Unlike ``allow_union``, this does not prevent ``UnionArray`` at
-        deeper levels. Awkward Array does not allow a ``UnionArray`` to
-        directly contain another ``UnionArray``.
+        The outermost content node cannot be a ``UnionArray`` if ``False``. Unlike
+        ``allow_union``, this does not prevent ``UnionArray`` at deeper levels. Awkward
+        Array does not allow a ``UnionArray`` to directly contain another ``UnionArray``.
     max_depth
-        Maximum nesting depth. At each level below this limit, a coin flip
-        decides whether to descend further or produce a leaf. Each
-        RegularArray, ListOffsetArray, ListArray, RecordArray, and UnionArray
-        layer adds one level, excluding those that form string or bytestring
-        content.
+        Maximum nesting depth. At each level below this limit, a coin flip decides
+        whether to descend further or produce a leaf. Each RegularArray, ListOffsetArray,
+        ListArray, RecordArray, and UnionArray layer adds one level, excluding those that
+        form string or bytestring content.
     max_length
         Maximum ``len()`` of the generated content. No constraint when ``None`` (the
         default).
@@ -237,16 +232,13 @@ def content_lists(
     Parameters
     ----------
     st_content
-        A callable that accepts ``max_size`` and returns a strategy for
-        a single content.
+        A callable that accepts ``max_size`` and returns a strategy for a single content.
     max_total_size
-        Maximum total number of leaf elements across all contents in the
-        list.
+        Maximum total number of leaf elements across all contents in the list.
     min_size
         Minimum number of contents in the list.
     max_size
-        Maximum number of contents in the list. By default there is no
-        upper bound.
+        Maximum number of contents in the list. By default there is no upper bound.
 
     '''
     remaining = max_total_size

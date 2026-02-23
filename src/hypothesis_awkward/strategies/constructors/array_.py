@@ -27,10 +27,9 @@ def arrays(
 ) -> ak.Array:
     '''Strategy for Awkward Arrays.
 
-    Builds arrays with NumpyArray, EmptyArray, string, and bytestring as leaf
-    contents that can be nested multiple levels deep in RegularArray,
-    ListOffsetArray, ListArray, RecordArray, and UnionArray. Arrays might be
-    virtual.
+    Builds arrays with NumpyArray, EmptyArray, string, and bytestring as leaf contents
+    that can be nested multiple levels deep in RegularArray, ListOffsetArray, ListArray,
+    RecordArray, and UnionArray. Arrays might be virtual.
 
     Parameters
     ----------
@@ -39,29 +38,27 @@ def arrays(
         default strategy that generates any scalar dtype supported by Awkward Array is
         used. Does not affect string or bytestring content.
     max_size
-        Maximum total number of elements in the generated content. Each
-        numerical value, including complex and datetime, counts as one. Each
-        string and bytestring (not character or byte) counts as one.
+        Maximum total number of elements in the generated content. Each numerical value,
+        including complex and datetime, counts as one. Each string and bytestring (not
+        character or byte) counts as one.
     allow_nan
         No ``NaN``/``NaT`` values are generated in ``NumpyArray`` if ``False``.
     allow_numpy
         No ``NumpyArray`` is generated if ``False``.
     allow_empty
-        No ``EmptyArray`` is generated if ``False``. ``EmptyArray`` has Awkward
-        type ``unknown`` and carries no data. Unlike ``NumpyArray``, it is
-        unaffected by ``dtypes`` and ``allow_nan``.
+        No ``EmptyArray`` is generated if ``False``. ``EmptyArray`` has Awkward type
+        ``unknown`` and carries no data. Unlike ``NumpyArray``, it is unaffected by
+        ``dtypes`` and ``allow_nan``.
     allow_string
-        No string content is generated if ``False``. Strings are represented
-        as a ``ListOffsetArray`` wrapping a ``NumpyArray(uint8)``. Each
-        string (not character) counts toward ``max_size``. The string
-        itself does not count toward ``max_depth``. Unaffected by ``dtypes``
-        and ``allow_nan``.
+        No string content is generated if ``False``. Strings are represented as a
+        ``ListOffsetArray`` wrapping a ``NumpyArray(uint8)``. Each string (not character)
+        counts toward ``max_size``. The string itself does not count toward
+        ``max_depth``. Unaffected by ``dtypes`` and ``allow_nan``.
     allow_bytestring
-        No bytestring content is generated if ``False``. Bytestrings are
-        represented as a ``ListOffsetArray`` wrapping a ``NumpyArray(uint8)``.
-        Each bytestring (not byte) counts toward ``max_size``. The
-        bytestring itself does not count toward ``max_depth``. Unaffected
-        by ``dtypes`` and ``allow_nan``.
+        No bytestring content is generated if ``False``. Bytestrings are represented as a
+        ``ListOffsetArray`` wrapping a ``NumpyArray(uint8)``. Each bytestring (not byte)
+        counts toward ``max_size``. The bytestring itself does not count toward
+        ``max_depth``. Unaffected by ``dtypes`` and ``allow_nan``.
     allow_regular
         No ``RegularArray`` is generated if ``False``.
     allow_list_offset
@@ -74,8 +71,8 @@ def arrays(
         No ``UnionArray`` is generated if ``False``.
     max_depth
         Maximum nesting depth. Each RegularArray, ListOffsetArray, ListArray,
-        RecordArray, and UnionArray layer adds one level, excluding those that
-        form string or bytestring content.
+        RecordArray, and UnionArray layer adds one level, excluding those that form
+        string or bytestring content.
     max_length
         Maximum ``len()`` of the generated array. No constraint when ``None`` (the
         default).

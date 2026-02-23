@@ -18,8 +18,8 @@ def string_contents(
     Parameters
     ----------
     alphabet
-        A strategy for characters used in the generated strings. If ``None``,
-        the full Unicode range is used.
+        A strategy for characters used in the generated strings. If ``None``, the full
+        Unicode range is used.
     min_size
         Minimum number of strings.
     max_size

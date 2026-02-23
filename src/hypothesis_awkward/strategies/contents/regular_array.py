@@ -18,13 +18,13 @@ def regular_array_contents(
     Parameters
     ----------
     content
-        Child content. Can be a strategy for Content, a concrete Content
-        instance, or ``None`` to draw from ``contents()``.
+        Child content. Can be a strategy for Content, a concrete Content instance, or
+        ``None`` to draw from ``contents()``.
     max_size
         Upper bound on the length of each element.
     max_zeros_length
-        Upper bound on the number of elements when each element is
-        empty, i.e., when size is zero.
+        Upper bound on the number of elements when each element is empty, i.e., when
+        size is zero.
     max_length
         Upper bound on the number of groups, i.e., ``len(result)``.
 
@@ -77,22 +77,18 @@ def _st_group_sizes(
 ) -> st.SearchStrategy[int]:
     '''Strategy for the size parameter of a RegularArray.
 
-    A RegularArray subdivides ``total_items`` into equal groups of
-    ``group_size``, so ``group_size`` must be a divisor of
-    ``total_items`` and at most ``max_group_size``.
+    A RegularArray subdivides ``total_items`` into equal groups of ``group_size``, so
+    ``group_size`` must be a divisor of ``total_items`` and at most ``max_group_size``.
 
-    When ``total_items == 0``, any group size up to ``max_group_size``
-    is valid because zero items can be split into zero groups of any
-    size.
+    When ``total_items == 0``, any group size up to ``max_group_size`` is valid because
+    zero items can be split into zero groups of any size.
 
-    When ``max_length`` is set, only divisors that produce at most
-    ``max_length`` groups are considered, i.e., divisors ``d`` where
-    ``total_items // d <= max_length``.
+    When ``max_length`` is set, only divisors that produce at most ``max_length`` groups
+    are considered, i.e., divisors ``d`` where ``total_items // d <= max_length``.
 
-    When ``total_items > 0`` but no valid divisor exists (i.e.,
-    ``max_group_size == 0`` or ``max_length`` is too small), returns
-    ``0``. The caller uses this to fall back to the ``zeros_length``
-    path, producing a RegularArray whose elements are all empty.
+    When ``total_items > 0`` but no valid divisor exists (i.e., ``max_group_size == 0``
+    or ``max_length`` is too small), returns ``0``. The caller uses this to fall back to
+    the ``zeros_length`` path, producing a RegularArray whose elements are all empty.
     '''
     if total_items == 0:
         return st.integers(min_value=0, max_value=max_group_size)

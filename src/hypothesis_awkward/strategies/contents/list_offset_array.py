@@ -18,8 +18,8 @@ def list_offset_array_contents(
     Parameters
     ----------
     content
-        Child content. Can be a strategy for Content, a concrete Content
-        instance, or ``None`` to draw from ``contents()``.
+        Child content. Can be a strategy for Content, a concrete Content instance, or
+        ``None`` to draw from ``contents()``.
     max_length
         Upper bound on the number of lists, i.e., ``len(result)``.
 

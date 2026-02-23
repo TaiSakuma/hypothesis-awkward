@@ -20,8 +20,8 @@ def record_array_contents(
     Parameters
     ----------
     contents
-        Child contents. Can be a strategy for a list of Content, a concrete
-        list, or ``None`` to draw random children.
+        Child contents. Can be a strategy for a list of Content, a concrete list, or
+        ``None`` to draw random children.
     max_fields
         Maximum number of fields when ``contents`` is ``None``.
     allow_tuple

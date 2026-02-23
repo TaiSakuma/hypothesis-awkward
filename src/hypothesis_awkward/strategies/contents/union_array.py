@@ -22,13 +22,13 @@ def union_array_contents(
     Parameters
     ----------
     contents
-        Child contents. Can be a strategy for a list of Content, a concrete
-        list, or ``None`` to draw random children.
+        Child contents. Can be a strategy for a list of Content, a concrete list, or
+        ``None`` to draw random children.
     max_contents
         Maximum number of child contents when ``contents`` is ``None``.
     max_length
-        Upper bound on the union length, i.e., ``len(result)``.
-        When ``None``, no constraint is applied.
+        Upper bound on the union length, i.e., ``len(result)``. When ``None``, no
+        constraint is applied.
 
     Examples
     --------
