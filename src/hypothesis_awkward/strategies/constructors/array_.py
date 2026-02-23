@@ -22,6 +22,7 @@ def arrays(
     allow_record: bool = True,
     allow_union: bool = True,
     max_depth: int = 5,
+    max_length: int | None = None,
     allow_virtual: bool = True,
 ) -> ak.Array:
     '''Strategy for Awkward Arrays.
@@ -75,6 +76,9 @@ def arrays(
         Maximum nesting depth. Each RegularArray, ListOffsetArray, ListArray,
         RecordArray, and UnionArray layer adds one level, excluding those that
         form string or bytestring content.
+    max_length
+        Maximum ``len()`` of the generated array. No constraint when ``None`` (the
+        default).
     allow_virtual
         No virtual arrays are generated if ``False``.
 
@@ -99,6 +103,7 @@ def arrays(
             allow_record=allow_record,
             allow_union=allow_union,
             max_depth=max_depth,
+            max_length=max_length,
         )
     )
     array = ak.Array(layout)

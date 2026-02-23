@@ -14,6 +14,7 @@ from hypothesis_awkward.util import (
     iter_contents,
     iter_numpy_arrays,
 )
+from hypothesis_awkward.util.safe import safe_compare as sc
 
 DEFAULT_MAX_SIZE = 10
 DEFAULT_MAX_DEPTH = 5
@@ -35,6 +36,7 @@ class ContentsKwargs(TypedDict, total=False):
     allow_record: bool
     allow_union: bool
     max_depth: int
+    max_length: int | None
 
 
 @st.composite
@@ -67,6 +69,7 @@ def contents_kwargs(
                 'allow_record': st.booleans(),
                 'allow_union': st.booleans(),
                 'max_depth': st.integers(min_value=0, max_value=5),
+                'max_length': st.integers(min_value=0, max_value=50),
             },
         )
     )
@@ -109,6 +112,7 @@ def test_contents(data: st.DataObject) -> None:
     allow_record = opts.kwargs.get('allow_record', True)
     allow_union = opts.kwargs.get('allow_union', True)
     max_depth = opts.kwargs.get('max_depth', DEFAULT_MAX_DEPTH)
+    max_length = opts.kwargs.get('max_length')
 
     allow_any_nesting = any(
         (allow_regular, allow_list_offset, allow_list, allow_record, allow_union)
@@ -151,6 +155,7 @@ def test_contents(data: st.DataObject) -> None:
         assert not any_nan_nat_in_awkward_array(c)
 
     assert _nesting_depth(c) <= max_depth
+    assert len(c) <= sc(max_length)
 
 
 def test_draw_max_depth() -> None:
@@ -168,6 +173,26 @@ def test_draw_nested() -> None:
     find(
         st_ak.contents.contents(max_size=20),
         lambda c: _nesting_depth(c) >= 2,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
+
+
+def test_draw_max_length() -> None:
+    '''Assert that max_length constrains the content length.'''
+    max_length = 5
+    find(
+        st_ak.contents.contents(max_size=50, max_length=max_length),
+        lambda c: len(c) == max_length,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
+
+
+def test_draw_max_length_not_recursed() -> None:
+    '''Assert that max_length does not constrain nested content length.'''
+    max_length = 2
+    find(
+        st_ak.contents.contents(max_size=50, max_length=max_length),
+        lambda c: any(len(n) > max_length for n in iter_contents(c) if n is not c),
         settings=settings(phases=[Phase.generate], max_examples=2000),
     )
 

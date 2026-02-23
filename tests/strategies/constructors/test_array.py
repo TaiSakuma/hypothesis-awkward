@@ -31,6 +31,7 @@ DEFAULTS = ArraysKwargs(
     allow_record=True,
     allow_union=True,
     max_depth=5,
+    max_length=None,
     allow_virtual=True,
 )
 

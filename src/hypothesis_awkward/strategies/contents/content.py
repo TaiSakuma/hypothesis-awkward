@@ -37,6 +37,7 @@ def contents(
     allow_union: bool = True,
     allow_union_root: bool = True,
     max_depth: int = 5,
+    max_length: int | None = None,
 ) -> Content:
     '''Strategy for Awkward Array content layouts.
 
@@ -97,6 +98,9 @@ def contents(
         RegularArray, ListOffsetArray, ListArray, RecordArray, and UnionArray
         layer adds one level, excluding those that form string or bytestring
         content.
+    max_length
+        Maximum ``len()`` of the generated content. No constraint when ``None`` (the
+        default).
 
     Examples
     --------
@@ -114,6 +118,7 @@ def contents(
         allow_string=allow_string,
         allow_bytestring=allow_bytestring,
     )
+    leaf_max_size = min(max_size, max_length) if max_length is not None else max_size
 
     leaf_only = (
         not any(
@@ -128,10 +133,10 @@ def contents(
         or max_size == 0
     )
     if leaf_only:
-        return draw(st_leaf(min_size=0, max_size=max_size))
+        return draw(st_leaf(min_size=0, max_size=leaf_max_size))
 
     if max_depth <= 0 or not draw(st.booleans()):
-        return draw(st_leaf(min_size=0, max_size=max_size))
+        return draw(st_leaf(min_size=0, max_size=leaf_max_size))
 
     recurse = functools.partial(
         contents,
@@ -163,7 +168,7 @@ def contents(
         candidates.append('union')
 
     if not candidates:
-        return draw(st_leaf(min_size=0, max_size=max_size))
+        return draw(st_leaf(min_size=0, max_size=leaf_max_size))
 
     node_type = draw(st.sampled_from(sorted(candidates)))
 
@@ -176,22 +181,38 @@ def contents(
                     min_size=2,
                 )
             )
-            return draw(st_ak.contents.union_array_contents(children))
+            return draw(
+                st_ak.contents.union_array_contents(children, max_length=max_length)
+            )
 
         case 'record':
             children = draw(content_lists(recurse, max_total_size=max_size, min_size=1))
-            return draw(st_ak.contents.record_array_contents(children))
+            return draw(
+                st_ak.contents.record_array_contents(children, max_length=max_length)
+            )
 
         case 'regular':
             child = draw(recurse(max_size=max_size))
-            return draw(st_ak.contents.regular_array_contents(child))
+            return draw(
+                st_ak.contents.regular_array_contents(child, max_length=max_length)
+            )
 
         case 'list_offset':
             child = draw(recurse(max_size=max_size))
+            if max_length is not None:
+                return draw(
+                    st_ak.contents.list_offset_array_contents(
+                        child, max_length=max_length
+                    )
+                )
             return draw(st_ak.contents.list_offset_array_contents(child))
 
         case 'list':
             child = draw(recurse(max_size=max_size))
+            if max_length is not None:
+                return draw(
+                    st_ak.contents.list_array_contents(child, max_length=max_length)
+                )
             return draw(st_ak.contents.list_array_contents(child))
 
         case _ as unreachable:  # pragma: no cover
