@@ -76,6 +76,8 @@ Same semantics as `list_offset_array_contents()`:
 len(starts) <= max_length
 ```
 
+The number of lists is drawn from `[0, max_length]`, defaulting to `5`.
+
 #### `record_array_contents()`
 
 `max_length` constrains the shared field length (all fields in a `RecordArray`
@@ -307,3 +309,4 @@ everything together.
 
 1. `regular_array_contents()` — done
 2. `list_offset_array_contents()` — done
+3. `list_array_contents()` — done

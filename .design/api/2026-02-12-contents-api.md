@@ -28,6 +28,10 @@
 >   in [max-length-research](../research/2026-02-23-max-length-research.md).
 > - `regular_array_contents()` gained `max_length` parameter to cap the number
 >   of groups. See [max-length-api](./2026-02-23-max-length-api.md).
+> - `list_offset_array_contents()` and `list_array_contents()` gained
+>   `max_length` parameter to cap the number of lists, replacing the
+>   module-level `MAX_LIST_LENGTH` constant. See
+>   [max-length-api](./2026-02-23-max-length-api.md).
 
 ## Overview
 
@@ -320,12 +324,12 @@ If `size == 0`, `zeros_length` is drawn from `[0, max_zeros_length]` and a
 Wraps child content in `ListOffsetArray`.
 
 ```python
-MAX_LIST_LENGTH = 5
-
 @st.composite
 def list_offset_array_contents(
     draw: st.DrawFn,
     content: st.SearchStrategy[Content] | Content | None = None,
+    *,
+    max_length: int = 5,
 ) -> Content:
 ```
 
@@ -333,15 +337,14 @@ def list_offset_array_contents(
 
 - **`content`** — Same three-form dispatch as `regular_array_contents()`.
 
+- **`max_length`** — Upper bound on the number of lists, i.e., `len(result)`.
+  Default: `5`. See [max-length-api](./2026-02-23-max-length-api.md).
+
 #### Behavior
 
-Draws `n` (number of lists) from `[0, MAX_LIST_LENGTH]`, then generates sorted
+Draws `n` (number of lists) from `[0, max_length]`, then generates sorted
 split points to partition the content into `n` sublists. The resulting offsets
 array is monotonically non-decreasing and covers all content elements.
-
-#### Constants
-
-- `MAX_LIST_LENGTH = 5` — upper bound for the number of sublists
 
 ### `list_array_contents()`
 
@@ -350,12 +353,12 @@ Wraps child content in `ListArray`. Identical logic to
 arrays instead of a single `offsets` array.
 
 ```python
-MAX_LIST_LENGTH = 5
-
 @st.composite
 def list_array_contents(
     draw: st.DrawFn,
     content: st.SearchStrategy[Content] | Content | None = None,
+    *,
+    max_length: int = 5,
 ) -> Content:
 ```
 
@@ -363,14 +366,13 @@ def list_array_contents(
 
 - **`content`** — Same three-form dispatch as `regular_array_contents()`.
 
+- **`max_length`** — Upper bound on the number of lists, i.e., `len(result)`.
+  Default: `5`. See [max-length-api](./2026-02-23-max-length-api.md).
+
 #### Behavior
 
 Same partitioning logic as `list_offset_array_contents()`. The offsets array is
 split into `starts = offsets[:-1]` and `stops = offsets[1:]`.
-
-#### Constants
-
-- `MAX_LIST_LENGTH = 5` — upper bound for the number of sublists
 
 ### `record_array_contents()`
 
@@ -575,18 +577,15 @@ match content:
 
 **Decision:** Use module-level constants for wrapper size limits.
 
-| Constant          | Value | Location                                         |
-| ----------------- | ----- | ------------------------------------------------ |
-| `MAX_LIST_LENGTH` | `5`   | `contents/list_offset_array.py`, `list_array.py` |
-
 `MAX_REGULAR_SIZE` was removed and replaced by the `max_size` and
 `max_zeros_length` parameters on `regular_array_contents()` (both default to 5).
+`MAX_LIST_LENGTH` was removed and replaced by the `max_length` parameter on
+`list_offset_array_contents()` and `list_array_contents()` (both default to 5).
 
 **Rationale:**
 
 - Keeps generated arrays small and test-friendly
-- `regular_array_contents()` now exposes its limits as parameters;
-  `MAX_LIST_LENGTH` is not yet exposed but can be promoted later
+- All wrapper strategies now expose their limits as parameters
 - Advanced users can compose custom wrappers
 
 ## Relationship to Existing Strategies
@@ -793,14 +792,13 @@ values.
 
 ## Open Questions
 
-1. **Should wrapper strategies expose size parameters?** ~~Currently,
+1. ~~**Should wrapper strategies expose size parameters?** Currently,
    `MAX_REGULAR_SIZE` and `MAX_LIST_LENGTH` are module-level constants. If
    promoted to parameters, the wrappers would gain keyword-only config after
-   `*`, which the signature already accommodates.~~ **Partially resolved.**
-   `regular_array_contents()` now exposes `max_size` and `max_zeros_length`
-   as keyword-only parameters (replacing `MAX_REGULAR_SIZE`). `MAX_LIST_LENGTH`
-   in `list_offset_array_contents()` and `list_array_contents()` remains a
-   module-level constant.
+   `*`, which the signature already accommodates.~~ **Resolved.**
+   `regular_array_contents()` exposes `max_size` and `max_zeros_length`
+   (replacing `MAX_REGULAR_SIZE`). `list_offset_array_contents()` and
+   `list_array_contents()` expose `max_length` (replacing `MAX_LIST_LENGTH`).
 
 2. **Should `contents()` support `min_size`?** Users may want to guarantee a
    minimum number of scalars. This would require `CountdownDrawer` to expose
@@ -838,6 +836,7 @@ values.
 4. ~~Add string/bytestring support~~ ✓ — see
    [string-bytestring-api](./2026-02-13-string-bytestring-api.md)
 5. ~~Consider exposing `MAX_REGULAR_SIZE` / `MAX_LIST_LENGTH` as parameters~~
-   Partially done — `regular_array_contents()` now exposes `max_size` and
-   `max_zeros_length`. `MAX_LIST_LENGTH` remains a constant.
+   Done — `regular_array_contents()` exposes `max_size` and `max_zeros_length`;
+   `list_offset_array_contents()` and `list_array_contents()` expose
+   `max_length`.
 6. Consider adding `min_size` to `contents()`
