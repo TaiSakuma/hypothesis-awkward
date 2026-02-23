@@ -132,6 +132,7 @@ def arrays(
     allow_record: bool = True,
     allow_union: bool = True,
     max_depth: int = 5,
+    max_length: int | None = None,
     allow_virtual: bool = True,
 ):
 ```
@@ -151,6 +152,7 @@ def arrays(
 | `allow_record` | No `RecordArray` is generated if `False`. |
 | `allow_union` | No `UnionArray` is generated if `False`. |
 | `max_depth` | Maximum nesting depth. Each `RegularArray`, `ListOffsetArray`, `ListArray`, `RecordArray`, and `UnionArray` layer adds one level, excluding those that form string or bytestring content. |
+| `max_length` | Maximum `len()` of the generated array. No constraint when `None` (the default). |
 | `allow_virtual` | No virtual arrays are generated if `False`. |
 
 ## Other strategies
