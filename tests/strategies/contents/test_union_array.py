@@ -7,6 +7,7 @@ from hypothesis import strategies as st
 import hypothesis_awkward.strategies as st_ak
 from awkward.contents import Content, UnionArray
 from hypothesis_awkward.util import iter_contents
+from hypothesis_awkward.util.safe import safe_compare as sc
 
 DEFAULT_MAX_CONTENTS = 4
 
@@ -16,6 +17,7 @@ class UnionArrayContentsKwargs(TypedDict, total=False):
 
     contents: list[Content] | st.SearchStrategy[list[Content]]
     max_contents: int
+    max_length: int
 
 
 @st.composite
@@ -49,6 +51,7 @@ def union_array_contents_kwargs(
                     st.just(st_contents),
                 ),
                 'max_contents': st.integers(min_value=2, max_value=10),
+                'max_length': st.integers(min_value=0, max_value=50),
             },
         )
     )
@@ -108,14 +111,17 @@ def test_union_array_contents(data: st.DataObject) -> None:
     assert len(tags) == len(index)
     assert len(result) == len(tags)
 
-    # Compact indexing: union length equals sum of content lengths,
-    # and each content element is referenced exactly once
-    assert len(result) == sum(len(c) for c in result.contents)
-    for tag_val in range(len(result.contents)):
-        indices_for_tag = index[tags == tag_val]
-        content_len = len(result.contents[tag_val])
-        assert len(indices_for_tag) == content_len
-        assert set(indices_for_tag.tolist()) == set(range(content_len))
+    # Compact indexing holds unless max_length is given
+    max_length = opts.kwargs.get('max_length')
+    if max_length is None:
+        for tag_val in range(len(result.contents)):
+            indices_for_tag = index[tags == tag_val]
+            content_len = len(result.contents[tag_val])
+            assert len(indices_for_tag) == content_len
+            assert set(indices_for_tag.tolist()) == set(range(content_len))
+
+    # Assert max_length constraint
+    assert len(result) <= sc(max_length)
 
 
 def test_draw_multiple_contents() -> None:
@@ -133,6 +139,16 @@ def test_draw_different_content_lengths() -> None:
     find(
         st_ak.contents.union_array_contents(),
         lambda u: len({len(c) for c in u.contents}) > 1,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
+
+
+def test_draw_max_length() -> None:
+    '''Assert that max_length constrains the UnionArray length.'''
+    max_length = 10
+    find(
+        st_ak.contents.union_array_contents(max_length=max_length),
+        lambda u: len(u) == max_length,
         settings=settings(phases=[Phase.generate], max_examples=2000),
     )
 
