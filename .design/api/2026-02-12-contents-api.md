@@ -26,6 +26,8 @@
 >   section below.
 > - Research on a `max_length` parameter (immediate `len()` cap) is documented
 >   in [max-length-research](../research/2026-02-23-max-length-research.md).
+> - `regular_array_contents()` gained `max_length` parameter to cap the number
+>   of groups. See [max-length-api](./2026-02-23-max-length-api.md).
 
 ## Overview
 
@@ -277,6 +279,7 @@ def regular_array_contents(
     *,
     max_size: int = 5,
     max_zeros_length: int = 5,
+    max_length: int | None = None,
 ) -> Content:
 ```
 
@@ -292,6 +295,10 @@ def regular_array_contents(
 
 - **`max_zeros_length`** — Upper bound on the number of elements when each
   element is empty, i.e., when `size` is zero. Default: `5`.
+
+- **`max_length`** — Upper bound on the number of groups, i.e., `len(result)`.
+  Default: `None` (no constraint). See
+  [max-length-api](./2026-02-23-max-length-api.md).
 
 #### Behavior
 

@@ -125,5 +125,9 @@ everything together:
 
 ## Status
 
-Planned. See [max-length-api](../api/2026-02-23-max-length-api.md) for the API
-design.
+In progress. See [max-length-api](../api/2026-02-23-max-length-api.md) for the
+API design.
+
+### Completed
+
+1. `regular_array_contents()` — `max_length` constrains the number of groups

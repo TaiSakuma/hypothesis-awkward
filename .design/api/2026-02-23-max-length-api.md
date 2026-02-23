@@ -1,7 +1,7 @@
 # API Design: `max_length` Parameter
 
 **Date:** 2026-02-23
-**Status:** Planned
+**Status:** In progress
 **Author:** Claude (with developer collaboration)
 
 ## Overview
@@ -303,3 +303,7 @@ See [max-length-research](../research/2026-02-23-max-length-research.md) for
 the bottom-up implementation order. Wrapper strategies are implemented first
 (they receive `max_length`), then leaves, then the entry points that wire
 everything together.
+
+### Progress
+
+1. `regular_array_contents()` — done
