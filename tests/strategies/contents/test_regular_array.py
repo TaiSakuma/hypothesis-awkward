@@ -14,6 +14,7 @@ class RegularArrayContentsKwargs(TypedDict, total=False):
     '''Options for `regular_array_contents()` strategy.'''
 
     content: st.SearchStrategy[Content] | Content
+    max_size: int
 
 
 @st.composite
@@ -34,6 +35,7 @@ def regular_array_contents_kwargs(
                     st_ak.contents.contents(),
                     st.just(st_content),
                 ),
+                'max_size': st.integers(min_value=0, max_value=50),
             },
         )
     )
@@ -55,7 +57,8 @@ def test_regular_array_contents(data: st.DataObject) -> None:
     assert isinstance(result, RegularArray)
 
     # Assert size is within bounds
-    assert 0 <= result.size <= MAX_REGULAR_SIZE
+    max_size = opts.kwargs.get('max_size', MAX_REGULAR_SIZE)
+    assert result.size <= max_size
 
     # Assert size divides content length when size > 0
     if result.size > 0:
@@ -70,6 +73,16 @@ def test_regular_array_contents(data: st.DataObject) -> None:
         case st_ak.RecordDraws():
             assert len(content.drawn) == 1
             assert result.content is content.drawn[0]
+
+
+def test_draw_max_size() -> None:
+    '''Assert that RegularArray with exactly max_size can be drawn.'''
+    max_size = 10
+    find(
+        st_ak.contents.regular_array_contents(max_size=max_size),
+        lambda c: c.size == max_size,
+        settings=settings(phases=[Phase.generate], max_examples=2000),
+    )
 
 
 def test_draw_from_contents_size_zero() -> None:
