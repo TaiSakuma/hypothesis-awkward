@@ -38,6 +38,11 @@
 >   length. When the total content length exceeds `max_length`, non-compact
 >   indexing is used (tags/index are truncated after shuffling). See
 >   [max-length-api](./2026-02-23-max-length-api.md).
+> - `numpy_array_contents()`, `string_contents()`, `bytestring_contents()`, and
+>   `leaf_contents()` gained `max_length` parameter. For leaf strategies,
+>   `max_length` and `max_size` constrain the same dimension; the effective
+>   limit is `min(max_size, max_length)`. See
+>   [max-length-api](./2026-02-23-max-length-api.md).
 
 ## Overview
 
@@ -189,6 +194,7 @@ def leaf_contents(
     allow_nan: bool = False,
     min_size: int = 0,
     max_size: int = 10,
+    max_length: int | None = None,
     allow_numpy: bool = True,
     allow_empty: bool = True,
     allow_string: bool = True,
@@ -211,6 +217,12 @@ def leaf_contents(
 - **`max_size`** — Maximum number of scalar values. Default: `10`. Forwarded to
   `numpy_array_contents()`.
 
+- **`max_length`** — Upper bound on the immediate `len()` of the result.
+  Default: `None` (no constraint). For leaf strategies, `max_length` and
+  `max_size` constrain the same dimension, so the effective limit is
+  `min(max_size, max_length)`. Forwarded to each leaf sub-strategy. See
+  [max-length-api](./2026-02-23-max-length-api.md).
+
 - **`allow_numpy`** — Generate `NumpyArray`. Default: `True`. At least one of
   `allow_numpy` or `allow_empty` must be `True`; disabling both raises
   `ValueError`.
@@ -227,12 +239,12 @@ def leaf_contents(
 Uses `st.one_of()` to select between enabled leaf types:
 
 - `allow_numpy=True` → includes `numpy_array_contents(dtypes, allow_nan,
-  min_size=min_size, max_size=max_size)`
+  min_size=min_size, max_size=max_size, max_length=max_length)`
 - `allow_empty=True` and `min_size == 0` → includes `empty_array_contents()`
 - `allow_string=True` → includes `string_contents(min_size=min_size,
-  max_size=max_size)`
+  max_size=max_size, max_length=max_length)`
 - `allow_bytestring=True` → includes `bytestring_contents(min_size=min_size,
-  max_size=max_size)`
+  max_size=max_size, max_length=max_length)`
 
 ### `numpy_array_contents()`
 
@@ -241,10 +253,12 @@ Generates 1-D `NumpyArray` content by drawing a NumPy array via
 
 ```python
 def numpy_array_contents(
+    *,
     dtypes: st.SearchStrategy[np.dtype] | None = None,
     allow_nan: bool = False,
     min_size: int = 0,
     max_size: int = 10,
+    max_length: int | None = None,
 ) -> st.SearchStrategy[ak.contents.NumpyArray]:
 ```
 
@@ -258,6 +272,11 @@ def numpy_array_contents(
 - **`min_size`** — Minimum number of elements. Default: `0`.
 
 - **`max_size`** — Maximum number of elements. Default: `10`.
+
+- **`max_length`** — Upper bound on the immediate `len()` of the result.
+  Default: `None` (no constraint). The effective limit is
+  `min(max_size, max_length)`. See
+  [max-length-api](./2026-02-23-max-length-api.md).
 
 #### Implementation
 

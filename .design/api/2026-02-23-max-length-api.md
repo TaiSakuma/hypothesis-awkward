@@ -320,3 +320,7 @@ everything together.
 3. `list_array_contents()` — done
 4. `record_array_contents()` — done
 5. `union_array_contents()` — done
+6. `numpy_array_contents()` — N/A (`max_size` is equivalent)
+7. `string_contents()` — N/A (`max_size` is equivalent)
+8. `bytestring_contents()` — N/A (`max_size` is equivalent)
+9. `leaf_contents()` — N/A (forwards to leaf strategies via `max_size`)
