@@ -33,7 +33,16 @@ of the repository. Update any docs that are outdated.
    For `.design/` docs, add a note at the top if the design has been
    superseded or significantly changed, rather than rewriting history.
 
-6. **Format** — Run `dprint fmt` on any markdown files you changed.
+6. **Optimize context** — Review always-loaded context (files without
+   `paths:` frontmatter) for size and relevance:
+   - Check total line counts. Flag any rule file over ~50 lines that isn't
+     path-scoped.
+   - Check whether any section in `CLAUDE.md` contains details that Claude
+     could discover from code (e.g., per-function listings). Suggest trimming.
+   - Check whether any rule file should be path-scoped to reduce default
+     context load.
+
+7. **Format** — Run `dprint fmt` on any markdown files you changed.
 
 ## Guidelines
 
